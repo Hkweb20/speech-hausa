@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: Hausa Live Speech-to-Text API
+  version: 0.1.0
+servers:
+  - url: http://localhost:4000
+paths:
+  /health:
+    get:
+  /api/stt/transcribe:
+  /api/transcripts:
+    get:
+      summary: List transcripts for current user (stub auth)
+      responses:
+        '200':
+          description: OK
+  /api/transcripts/{id}:
+    get:
+      summary: Get transcript by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200': { description: OK }
+        '404': { description: Not Found }
+    delete:
+      summary: Delete transcript by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204': { description: Deleted }
+        '404': { description: Not Found }
+    post:
+      summary: Transcribe an uploaded audio file (GCP STT)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                sampleRateHertz:
+                  type: integer
+                languageCode:
+                  type: string
+                  default: ha-NG
+                encoding:
+                  type: string
+                  enum: [LINEAR16, FLAC, AMR, AMR_WB, OGG_OPUS, WEBM_OPUS, MP3]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transcript:
+                    type: string
+                  confidence:
+                    type: number
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  version:
+                    type: string
+

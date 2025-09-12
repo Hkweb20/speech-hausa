@@ -1,0 +1,402 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transcription Socket Test</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+      label { display: block; margin: 0.5rem 0; }
+      textarea { width: 100%; height: 200px; }
+      .row { margin: 0.5rem 0; }
+      .log { background: #111; color: #0f0; padding: 0.5rem; height: 150px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>Transcription Socket Test</h1>
+
+    <div class="row">
+      <label>
+        Mode:
+        <select id="mode">
+          <option value="online">online (requires premium)</option>
+          <option value="offline">offline</option>
+        </select>
+      </label>
+      <label>
+        Premium: <input type="checkbox" id="premium" checked />
+      </label>
+      <button id="connectBtn">Connect & Join</button>
+      <button id="endBtn" disabled>End Session</button>
+    </div>
+
+    <div class="row">
+      <button id="sendChunkBtn" disabled>Send Fake Audio Chunk</button>
+    </div>
+
+    <div class="row">
+      <label>Session ID: <span id="sid">(none)</span></label>
+    </div>
+
+    <div class="row">
+      <label>Transcript updates</label>
+      <textarea id="out" readonly></textarea>
+    </div>
+
+    <div class="row">
+      <label>Log</label>
+      <div class="log" id="log"></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+      const logEl = document.getElementById('log');
+      function log(msg) {
+        const el = document.createElement('div');
+        el.textContent = `[${new Date().toISOString()}] ${msg}`;
+        logEl.appendChild(el);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      const out = document.getElementById('out');
+      const sidEl = document.getElementById('sid');
+      const modeSel = document.getElementById('mode');
+      const premiumChk = document.getElementById('premium');
+      const connectBtn = document.getElementById('connectBtn');
+      const sendChunkBtn = document.getElementById('sendChunkBtn');
+      const endBtn = document.getElementById('endBtn');
+
+      // Upload UI
+      const uploadSection = document.createElement('div');
+      uploadSection.innerHTML = `
+        <h2>Upload for STT</h2>
+        <input type="file" id="fileInput" accept="audio/*" />
+        <button id="uploadBtn">Upload & Transcribe</button>
+        <div id="uploadResult"></div>
+      `;
+      document.body.insertBefore(uploadSection, document.querySelector('.row'));
+
+      const fileInput = uploadSection.querySelector('#fileInput');
+      const uploadBtn = uploadSection.querySelector('#uploadBtn');
+      const uploadResult = uploadSection.querySelector('#uploadResult');
+
+      function inferEncodingByType(type) {
+        if (!type) return undefined;
+        if (type.includes('webm')) return 'WEBM_OPUS';
+        if (type.includes('ogg')) return 'OGG_OPUS';
+        if (type.includes('wav')) return 'LINEAR16';
+        if (type.includes('mp3')) return 'MP3';
+        return undefined;
+      }
+
+      uploadBtn.onclick = async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) { alert('Pick an audio file'); return; }
+        const fd = new FormData();
+        fd.append('audio', file, file.name);
+        const enc = inferEncodingByType(file.type);
+        if (enc) fd.append('encoding', enc);
+        fd.append('languageCode', 'ha-NG');
+        uploadResult.textContent = 'Transcribing...';
+        try {
+          const res = await fetch('/api/stt/transcribe', { method: 'POST', body: fd });
+          const json = await res.json();
+          uploadResult.textContent = res.ok ? `Transcript: ${json.transcript}` : `Error: ${json.message || res.status}`;
+        } catch (e) {
+          uploadResult.textContent = 'Network error: ' + e.message;
+        }
+      };
+
+      // Mic recording UI
+      const micSection = document.createElement('div');
+      micSection.innerHTML = `
+        <h2>Record from microphone</h2>
+        <button id="recStart">Start Recording</button>
+        <button id="recStop" disabled>Stop & Transcribe</button>
+        <audio id="playback" controls></audio>
+        <div id="recResult"></div>
+      `;
+      document.body.insertBefore(micSection, uploadSection.nextSibling);
+
+      const recStart = micSection.querySelector('#recStart');
+      const recStop = micSection.querySelector('#recStop');
+      const playback = micSection.querySelector('#playback');
+      const recResult = micSection.querySelector('#recResult');
+      let mediaRecorder; let recordedChunks = [];
+
+      recStart.onclick = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          recordedChunks = [];
+          const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined;
+          mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+          mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
+          mediaRecorder.start();
+          recStart.disabled = true; recStop.disabled = false; recResult.textContent = '';
+        } catch (e) {
+          recResult.textContent = 'Mic error: ' + e.message;
+        }
+      };
+
+      recStop.onclick = async () => {
+        recStop.disabled = true;
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+          playback.src = URL.createObjectURL(blob);
+          const fd = new FormData();
+          fd.append('audio', blob, 'recording.webm');
+          fd.append('encoding', 'WEBM_OPUS');
+          fd.append('languageCode', 'ha-NG');
+          recResult.textContent = 'Transcribing...';
+          try {
+            const res = await fetch('/api/stt/transcribe', { method: 'POST', body: fd });
+            const json = await res.json();
+            recResult.textContent = res.ok ? `Transcript: ${json.transcript}` : `Error: ${json.message || res.status}`;
+          } catch (e) {
+            recResult.textContent = 'Network error: ' + e.message;
+          } finally {
+            recStart.disabled = false;
+          }
+        };
+        mediaRecorder.stop();
+      };
+
+      let socket; let sessionId;
+
+      connectBtn.onclick = () => {
+        const premium = premiumChk.checked ? 'true' : 'false';
+        const mode = modeSel.value;
+
+        socket = io('/transcription', {
+          extraHeaders: { 'x-user-premium': premium },
+        });
+
+        socket.on('connect', () => {
+          log('connected');
+          socket.emit('join_session', { mode });
+        });
+
+        socket.on('session_status', (msg) => {
+          log('session_status ' + JSON.stringify(msg));
+          sessionId = msg.sessionId;
+          sidEl.textContent = sessionId;
+          sendChunkBtn.disabled = false;
+          endBtn.disabled = false;
+        });
+
+        socket.on('transcript_update', (msg) => {
+          log('transcript_update ' + JSON.stringify(msg));
+          out.value += (out.value ? '\n' : '') + (msg.isFinal ? '[FINAL] ' : '') + msg.text;
+        });
+
+        socket.on('error', (err) => {
+          log('error ' + JSON.stringify(err));
+        });
+
+        socket.on('disconnect', () => {
+          log('disconnected');
+          sendChunkBtn.disabled = true;
+          endBtn.disabled = true;
+        });
+      };
+
+      sendChunkBtn.onclick = () => {
+        if (!socket || !sessionId) return;
+        const base64 = btoa('fake audio data ' + Math.random());
+        socket.emit('audio_chunk', { sessionId, chunk: base64 });
+      };
+
+      endBtn.onclick = () => {
+        if (!socket || !sessionId) return;
+        socket.emit('end_session', { sessionId });
+      };
+
+      // Live socket transcription (mic -> chunks -> /transcription)
+      const liveSection = document.createElement('div');
+      liveSection.innerHTML = `
+        <h2>Live socket transcription (WebSocket)</h2>
+        <label>
+          Mode:
+          <select id="liveMode">
+            <option value="online">online (requires premium)</option>
+            <option value="offline">offline</option>
+          </select>
+        </label>
+        <label>
+          Premium: <input type="checkbox" id="livePremium" checked />
+        </label>
+        <div class="row">
+          <button id="liveConnect">Connect & Join</button>
+          <button id="liveDisconnect" disabled>Disconnect</button>
+        </div>
+        <div class="row">
+          <button id="liveStart" disabled>Start Mic</button>
+          <button id="liveStop" disabled>Stop Mic</button>
+          <button id="liveEnd" disabled>End Session</button>
+        </div>
+        <div class="row">
+          <label>Live Transcript</label>
+          <textarea id="liveOut" readonly></textarea>
+        </div>
+      `;
+      document.body.appendChild(liveSection);
+
+      const liveMode = liveSection.querySelector('#liveMode');
+      const livePremium = liveSection.querySelector('#livePremium');
+      const liveConnect = liveSection.querySelector('#liveConnect');
+      const liveDisconnect = liveSection.querySelector('#liveDisconnect');
+      const liveStart = liveSection.querySelector('#liveStart');
+      const liveStop = liveSection.querySelector('#liveStop');
+      const liveEnd = liveSection.querySelector('#liveEnd');
+      const liveOut = liveSection.querySelector('#liveOut');
+
+      let liveSocket; let liveSessionId; let rec; let recStream; let liveCtx; let liveSource; let liveProcessor;
+
+      function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = reject;
+          reader.onloadend = () => {
+            const dataUrl = reader.result;
+            const base64 = String(dataUrl).split(',')[1];
+            resolve(base64);
+          };
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      // PCM helpers for streaming
+      function encodePCM16(float32) {
+        const buffer = new ArrayBuffer(float32.length * 2);
+        const view = new DataView(buffer);
+        for (let i = 0; i < float32.length; i++) {
+          let s = Math.max(-1, Math.min(1, float32[i]));
+          view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+        }
+        return new Uint8Array(buffer);
+      }
+
+      function downsampleBuffer(float32, inRate, outRate) {
+        if (outRate === inRate) return float32;
+        const ratio = inRate / outRate;
+        const newLen = Math.floor(float32.length / ratio);
+        const result = new Float32Array(newLen);
+        let offsetResult = 0;
+        let offsetBuffer = 0;
+        while (offsetResult < result.length) {
+          const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+          let sum = 0;
+          let count = 0;
+          for (let i = offsetBuffer; i < nextOffsetBuffer && i < float32.length; i++) {
+            sum += float32[i];
+            count++;
+          }
+          result[offsetResult] = sum / count;
+          offsetResult++;
+          offsetBuffer = nextOffsetBuffer;
+        }
+        return result;
+      }
+
+      function uint8ToBase64(u8) {
+        let binary = '';
+        for (let i = 0; i < u8.byteLength; i++) binary += String.fromCharCode(u8[i]);
+        return btoa(binary);
+      }
+      let canSend = false;
+
+      liveConnect.onclick = () => {
+        const isPrem = livePremium.checked ? 'true' : 'false';
+        // Pass premium via query string for server gating
+        liveSocket = io(`/transcription?premium=${isPrem}`);
+
+        liveSocket.on('connect', () => {
+          log('[live] connected');
+          liveSocket.emit('join_session', { mode: liveMode.value });
+        });
+
+        liveSocket.on('session_status', (msg) => {
+          log('[live] session_status ' + JSON.stringify(msg));
+          liveSessionId = msg.sessionId;
+          liveDisconnect.disabled = false;
+          liveStart.disabled = false;
+          liveEnd.disabled = false;
+        });
+
+        liveSocket.on('transcript_update', (msg) => {
+          liveOut.value += (liveOut.value ? '\n' : '') + (msg.isFinal ? '[FINAL] ' : '') + msg.text;
+        });
+
+        liveSocket.on('error', (e) => log('[live] error ' + JSON.stringify(e)));
+        liveSocket.on('ready', () => { canSend = true; });
+        liveSocket.on('disconnect', () => {
+          log('[live] disconnected');
+          liveDisconnect.disabled = true;
+          liveStart.disabled = true;
+          liveStop.disabled = true;
+          liveEnd.disabled = true;
+        });
+
+        liveConnect.disabled = true;
+      };
+
+      liveDisconnect.onclick = () => {
+        if (liveSocket) liveSocket.disconnect();
+        liveConnect.disabled = false;
+      };
+
+      liveStart.onclick = async () => {
+        try {
+          recStream = await navigator.mediaDevices.getUserMedia({
+            audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          });
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          // Request 16k if possible
+          liveCtx = new AudioCtx({ sampleRate: 16000 });
+          liveSource = liveCtx.createMediaStreamSource(recStream);
+          const bufferSize = 1024; // ~64ms at 16k, reduces backpressure
+          liveProcessor = liveCtx.createScriptProcessor(bufferSize, 1, 1);
+          liveProcessor.onaudioprocess = (e) => {
+            if (!liveSessionId) return;
+            const input = e.inputBuffer.getChannelData(0);
+            const desiredRate = 16000;
+            const inRate = liveCtx.sampleRate || desiredRate;
+            const ds = downsampleBuffer(input, inRate, desiredRate);
+            if (canSend) {
+              canSend = false;
+              const pcm = encodePCM16(ds);
+              const b64 = uint8ToBase64(pcm);
+              liveSocket.emit('audio_chunk', { sessionId: liveSessionId, chunk: b64 });
+            }
+          };
+          liveSource.connect(liveProcessor);
+          liveProcessor.connect(liveCtx.destination);
+          liveStart.disabled = true;
+          liveStop.disabled = false;
+        } catch (e) {
+          log('[live] mic error ' + e.message);
+        }
+      };
+
+      liveStop.onclick = async () => {
+        try {
+          liveStop.disabled = true;
+          if (liveProcessor) liveProcessor.disconnect();
+          if (liveSource) liveSource.disconnect();
+          if (liveCtx) await liveCtx.close();
+          if (recStream) recStream.getTracks().forEach(t => t.stop());
+          liveStart.disabled = false;
+        } catch {}
+      };
+
+      liveEnd.onclick = () => {
+        if (!liveSocket || !liveSessionId) return;
+        liveSocket.emit('end_session', { sessionId: liveSessionId });
+        if (liveProcessor) liveProcessor.disconnect();
+        if (liveSource) liveSource.disconnect();
+        if (liveCtx) liveCtx.close();
+        if (recStream) recStream.getTracks().forEach(t => t.stop());
+      };
+    </script>
+  </body>
+</html>

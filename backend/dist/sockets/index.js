@@ -12,6 +12,9 @@ function initSockets(io) {
     const ns = io.of(NAMESPACE);
     const service = new gcp_streaming_service_1.GcpStreamingTranscriptionService();
     const sessionPartials = new Map();
+    const sessionStableFinal = new Map();
+    const sessionLastEmitAt = new Map();
+    const PARTIAL_MIN_INTERVAL_MS = 300;
     ns.use((socket, next) => {
         // Premium gating: header or query (?premium=true)
         const hdr = socket.handshake.headers['x-user-premium'] || '';
@@ -39,13 +42,25 @@ function initSockets(io) {
                     // Deduplicate partials to avoid spammy repeats
                     const last = sessionPartials.get(u.sessionId) || '';
                     if (u.isFinal) {
+                        const stable = sessionStableFinal.get(u.sessionId) || '';
+                        const newStable = `${stable}${stable ? ' ' : ''}${u.text}`.trim();
+                        sessionStableFinal.set(u.sessionId, newStable);
                         sessionPartials.delete(u.sessionId);
-                        ns.to(`session:${u.sessionId}`).emit('transcript_update', { sessionId: u.sessionId, text: u.text, isFinal: true });
+                        sessionLastEmitAt.delete(u.sessionId);
+                        ns.to(`session:${u.sessionId}`).emit('transcript_update', { sessionId: u.sessionId, text: u.text, fullText: newStable, isFinal: true });
                         return;
                     }
                     if (u.text && u.text !== last) {
+                        // Throttle interim emissions
+                        const now = Date.now();
+                        const lastAt = sessionLastEmitAt.get(u.sessionId) || 0;
+                        if (now - lastAt < PARTIAL_MIN_INTERVAL_MS)
+                            return;
+                        sessionLastEmitAt.set(u.sessionId, now);
                         sessionPartials.set(u.sessionId, u.text);
-                        ns.to(`session:${u.sessionId}`).emit('transcript_update', { sessionId: u.sessionId, text: u.text, isFinal: false });
+                        const stable = sessionStableFinal.get(u.sessionId) || '';
+                        const fullText = `${stable}${stable ? ' ' : ''}${u.text}`.trim();
+                        ns.to(`session:${u.sessionId}`).emit('transcript_update', { sessionId: u.sessionId, text: u.text, fullText, isFinal: false });
                     }
                 });
                 sessionId = res.sessionId;
@@ -100,9 +115,14 @@ function initSockets(io) {
             }
             try {
                 const { finalText } = service.endSession(sessionId);
-                ns.to(`session:${sessionId}`).emit('transcript_update', { sessionId, text: finalText, isFinal: true });
+                const stable = sessionStableFinal.get(sessionId) || '';
+                const combined = (stable || finalText || '').trim();
+                if (combined) {
+                    ns.to(`session:${sessionId}`).emit('transcript_update', { sessionId, text: finalText, fullText: combined, isFinal: true });
+                }
                 ns.to(`session:${sessionId}`).emit('session_status', { sessionId, status: 'completed' });
                 sessionPartials.delete(sessionId);
+                sessionStableFinal.delete(sessionId);
                 // Persist transcript
                 const now = new Date().toISOString();
                 const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
