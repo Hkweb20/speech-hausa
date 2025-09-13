@@ -7,12 +7,22 @@ exports.GcpSttService = void 0;
 const path_1 = __importDefault(require("path"));
 const speech_1 = require("@google-cloud/speech");
 const storage_1 = require("@google-cloud/storage");
+const logger_1 = require("../config/logger");
 class GcpSttService {
     constructor(keyFilename) {
+        const adcPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
         const defaultPath = path_1.default.join(process.cwd(), 'hausa-text-f0bae78a7264.json');
         const credsPath = keyFilename || defaultPath;
-        this.client = new speech_1.SpeechClient({ keyFilename: credsPath });
-        this.storage = new storage_1.Storage({ keyFilename: credsPath });
+        if (adcPath) {
+            this.client = new speech_1.SpeechClient({ keyFilename: adcPath });
+            this.storage = new storage_1.Storage({ keyFilename: adcPath });
+            logger_1.logger.info({ creds: 'ADC', path: adcPath }, 'Using GOOGLE_APPLICATION_CREDENTIALS');
+        }
+        else {
+            this.client = new speech_1.SpeechClient({ keyFilename: credsPath });
+            this.storage = new storage_1.Storage({ keyFilename: credsPath });
+            logger_1.logger.info({ creds: 'keyFilename', path: credsPath }, 'Using key file');
+        }
     }
     async transcribeFile(buffer, options) {
         const encoding = options?.encoding;

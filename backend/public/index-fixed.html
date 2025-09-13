@@ -362,13 +362,13 @@
     <!-- Authentication Section -->
     <div class="auth-section" id="authSection">
       <div class="auth-tabs">
-        <button class="auth-tab active" onclick="showAuthForm('login', this)">Login</button>
-        <button class="auth-tab" onclick="showAuthForm('register', this)">Register</button>
+        <button class="auth-tab active" id="loginTab">Login</button>
+        <button class="auth-tab" id="registerTab">Register</button>
       </div>
 
       <!-- Login Form -->
       <div class="auth-form active" id="loginForm">
-        <form onsubmit="handleLogin(event)">
+        <form id="loginFormElement">
           <div class="form-group">
             <label for="loginEmail">Email</label>
             <input type="email" id="loginEmail" required>
@@ -383,7 +383,7 @@
 
       <!-- Register Form -->
       <div class="auth-form" id="registerForm">
-        <form onsubmit="handleRegister(event)">
+        <form id="registerFormElement">
           <div class="form-group">
             <label for="registerName">Full Name</label>
             <input type="text" id="registerName" required>
@@ -410,7 +410,7 @@
         </div>
         <div>
           <span class="points-display" id="pointsDisplay">0 Points</span>
-          <button class="btn btn-secondary" onclick="logout()">Logout</button>
+          <button class="btn btn-secondary" id="logoutBtn">Logout</button>
         </div>
       </div>
       <div class="user-stats" id="userStats">
@@ -428,7 +428,7 @@
           <div class="upload-area" id="uploadArea">
             <p>Drag & drop your audio file here or click to browse</p>
             <input type="file" id="fileInput" class="file-input" accept="audio/*">
-            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+            <button class="upload-btn" id="uploadBtn">Choose File</button>
           </div>
           <div class="result-area" id="uploadResult">
             <div class="transcript-text">Your transcription will appear here...</div>
@@ -440,8 +440,8 @@
           <h3>🎙️ Live Recording</h3>
           <p>Record directly from your microphone and get real-time transcription with live streaming.</p>
           <div style="text-align: center; margin-bottom: 20px;">
-            <button class="btn btn-primary" id="recordBtn" onclick="startRecording()">Start Recording</button>
-            <button class="btn btn-secondary" id="stopBtn" onclick="stopRecording()" disabled>Stop Recording</button>
+            <button class="btn btn-primary" id="recordBtn">Start Recording</button>
+            <button class="btn btn-secondary" id="stopBtn" disabled>Stop Recording</button>
           </div>
           <audio id="playback" controls style="width: 100%; margin-bottom: 15px;"></audio>
           <div class="result-area" id="recordResult">
@@ -463,8 +463,8 @@
             </label>
           </div>
           <div style="text-align: center; margin-bottom: 20px;">
-            <button class="btn btn-primary" id="connectBtn" onclick="connectWebSocket()">Connect</button>
-            <button class="btn btn-secondary" id="disconnectBtn" onclick="disconnectWebSocket()" disabled>Disconnect</button>
+            <button class="btn btn-primary" id="connectBtn">Connect</button>
+            <button class="btn btn-secondary" id="disconnectBtn" disabled>Disconnect</button>
           </div>
           <div class="result-area" id="streamResult">
             <div class="transcript-text">Real-time transcription will appear here...</div>
@@ -476,8 +476,8 @@
           <h3>⭐ Points & Premium</h3>
           <p>Earn points by watching ads and unlock premium features. Upgrade your subscription for unlimited access.</p>
           <div style="margin-bottom: 15px;">
-            <button class="btn btn-primary" onclick="watchAd()">Watch Ad (+10 Points)</button>
-            <button class="btn btn-secondary" onclick="showSubscriptionTiers()">View Plans</button>
+            <button class="btn btn-primary" id="watchAdBtn">Watch Ad (+10 Points)</button>
+            <button class="btn btn-secondary" id="showPlansBtn">View Plans</button>
           </div>
           <div class="result-area" id="pointsResult">
             <div class="transcript-text">Points and subscription info will appear here...</div>
@@ -527,13 +527,18 @@
     }
 
     // Authentication functions
-    function showAuthForm(formType, clickedElement) {
+    function showAuthForm(formType) {
       console.log('Switching to form:', formType);
       document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
       document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
       
-      clickedElement.classList.add('active');
-      document.getElementById(formType + 'Form').classList.add('active');
+      if (formType === 'login') {
+        document.getElementById('loginTab').classList.add('active');
+        document.getElementById('loginForm').classList.add('active');
+      } else {
+        document.getElementById('registerTab').classList.add('active');
+        document.getElementById('registerForm').classList.add('active');
+      }
       console.log('Form switched successfully');
     }
 
@@ -682,6 +687,11 @@
     function setupFileUpload() {
       const uploadArea = document.getElementById('uploadArea');
       const fileInput = document.getElementById('fileInput');
+      const uploadBtn = document.getElementById('uploadBtn');
+
+      uploadBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
 
       uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -783,8 +793,41 @@
           audio.src = URL.createObjectURL(blob);
           
           showLoading('Transcribing recording...', 'recordResult');
-          await handleFileUpload(blob);
+          await handleRecordedAudio(blob);
         };
+      }
+    }
+
+    async function handleRecordedAudio(blob) {
+      log('Transcribing recorded audio...');
+
+      const formData = new FormData();
+      formData.append('audio', blob);
+      formData.append('languageCode', 'ha-NG');
+      formData.append('sampleRateHertz', '16000');
+
+      try {
+        const response = await fetch('/api/stt/transcribe', {
+          method: 'POST',
+          headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {},
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          document.getElementById('recordResult').innerHTML = `
+            <div class="transcript-text">${data.transcript}</div>
+            <div class="success">Recording transcribed successfully!</div>
+          `;
+          log('Recording transcription successful');
+        } else {
+          showError(data.message || 'Transcription failed', 'recordResult');
+          log('Recording transcription error: ' + (data.message || 'Unknown error'));
+        }
+      } catch (error) {
+        showError('Network error: ' + error.message, 'recordResult');
+        log('Recording upload error: ' + error.message);
       }
     }
 
@@ -915,12 +958,18 @@
         // Test if JavaScript is working
         console.log('Hausa Speech-to-Text App loaded successfully');
         
-        // Add click listeners for better debugging
-        document.querySelectorAll('.auth-tab').forEach(tab => {
-          tab.addEventListener('click', function() {
-            console.log('Tab clicked:', this.textContent);
-          });
-        });
+        // Add event listeners
+        document.getElementById('loginTab').addEventListener('click', () => showAuthForm('login'));
+        document.getElementById('registerTab').addEventListener('click', () => showAuthForm('register'));
+        document.getElementById('loginFormElement').addEventListener('submit', handleLogin);
+        document.getElementById('registerFormElement').addEventListener('submit', handleRegister);
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('recordBtn').addEventListener('click', startRecording);
+        document.getElementById('stopBtn').addEventListener('click', stopRecording);
+        document.getElementById('connectBtn').addEventListener('click', connectWebSocket);
+        document.getElementById('disconnectBtn').addEventListener('click', disconnectWebSocket);
+        document.getElementById('watchAdBtn').addEventListener('click', watchAd);
+        document.getElementById('showPlansBtn').addEventListener('click', showSubscriptionTiers);
         
         // Test form elements exist
         const loginForm = document.getElementById('loginForm');
@@ -936,3 +985,4 @@
   </script>
 </body>
 </html>
+

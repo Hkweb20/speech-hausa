@@ -1,5 +1,6 @@
 import path from 'path';
 import { SpeechClient } from '@google-cloud/speech';
+import { logger } from '../config/logger';
 import type { TranscriptionMode, TranscriptionService, StartSessionResult } from './transcription.service';
 
 type SessionState = {
@@ -15,9 +16,16 @@ export class GcpStreamingTranscriptionService implements TranscriptionService {
   private sessions = new Map<string, SessionState>();
 
   constructor(keyFilename?: string) {
+    const adcPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
     const defaultPath = path.join(process.cwd(), 'hausa-text-f0bae78a7264.json');
     const credsPath = keyFilename || defaultPath;
-    this.client = new SpeechClient({ keyFilename: credsPath });
+    if (adcPath) {
+      this.client = new SpeechClient({ keyFilename: adcPath });
+      logger.info({ creds: 'ADC', path: adcPath }, 'Using GOOGLE_APPLICATION_CREDENTIALS');
+    } else {
+      this.client = new SpeechClient({ keyFilename: credsPath });
+      logger.info({ creds: 'keyFilename', path: credsPath }, 'Using key file');
+    }
   }
 
   startSession(

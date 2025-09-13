@@ -1,9 +1,16 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.apiRouter = void 0;
 const express_1 = require("express");
 const health_routes_1 = require("./health.routes");
 const transcripts_routes_1 = require("./transcripts.routes");
+const mongodb_auth_routes_1 = __importDefault(require("./mongodb-auth.routes"));
+const points_routes_1 = __importDefault(require("./points.routes"));
 exports.apiRouter = (0, express_1.Router)();
 exports.apiRouter.use('/health', health_routes_1.healthRouter);
 exports.apiRouter.use('/api', transcripts_routes_1.transcriptsRouter);
+exports.apiRouter.use('/api/auth', mongodb_auth_routes_1.default);
+exports.apiRouter.use('/api/points', points_routes_1.default);

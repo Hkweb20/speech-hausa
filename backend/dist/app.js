@@ -31,9 +31,11 @@ function createApp() {
             useDefaults: true,
             directives: {
                 "default-src": ["'self'"],
-                "script-src": ["'self'", "'unsafe-inline'", 'https://cdn.socket.io', 'blob:'],
-                "script-src-elem": ["'self'", "'unsafe-inline'", 'https://cdn.socket.io', 'blob:'],
+                "script-src": ["'self'", "'unsafe-inline'", "'unsafe-hashes'", 'https://cdn.socket.io', 'blob:'],
+                "script-src-elem": ["'self'", "'unsafe-inline'", "'unsafe-hashes'", 'https://cdn.socket.io', 'blob:'],
+                "script-src-attr": ["'unsafe-inline'", "'unsafe-hashes'"],
                 "connect-src": ["'self'", 'ws:', 'wss:', 'http:', 'https:'],
+                "media-src": ["'self'", 'blob:', 'data:'],
                 "style-src": ["'self'", "'unsafe-inline'"],
                 "img-src": ["'self'", 'data:'],
                 "worker-src": ["'self'", 'blob:'],

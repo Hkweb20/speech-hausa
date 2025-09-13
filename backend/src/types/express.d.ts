@@ -1,3 +1,19 @@
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  subscriptionTier: string;
+  subscriptionStatus: string;
+  pointsBalance: number;
+  isPremium: boolean; // Add this to make it compatible with UserStub
+  usageStats: {
+    dailyMinutes: number;
+    monthlyMinutes: number;
+    totalMinutes: number;
+    transcriptsCount: number;
+  };
+}
+
 declare namespace Express {
   interface UserStub {
     id: string;
@@ -6,7 +22,7 @@ declare namespace Express {
   }
 
   interface Request {
-    user?: UserStub;
+    user?: AuthUser | UserStub;
     requestId?: string;
   }
 }

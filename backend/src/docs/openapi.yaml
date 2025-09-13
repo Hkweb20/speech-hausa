@@ -1,76 +1,30 @@
 openapi: 3.0.3
 info:
   title: Hausa Live Speech-to-Text API
+  description: |
+    A comprehensive API for Hausa speech-to-text transcription with subscription tiers, 
+    points system, and premium features. Supports both file upload and live streaming transcription.
   version: 0.1.0
+  contact:
+    name: Hausa Speech API Support
+    email: support@hausaspeech.com
 servers:
   - url: http://localhost:4000
+    description: Development server
+  - url: https://api.hausaspeech.com
+    description: Production server
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
 paths:
   /health:
     get:
-  /api/stt/transcribe:
-  /api/transcripts:
-    get:
-      summary: List transcripts for current user (stub auth)
-      responses:
-        '200':
-          description: OK
-  /api/transcripts/{id}:
-    get:
-      summary: Get transcript by id
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200': { description: OK }
-        '404': { description: Not Found }
-    delete:
-      summary: Delete transcript by id
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204': { description: Deleted }
-        '404': { description: Not Found }
-    post:
-      summary: Transcribe an uploaded audio file (GCP STT)
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                audio:
-                  type: string
-                  format: binary
-                sampleRateHertz:
-                  type: integer
-                languageCode:
-                  type: string
-                  default: ha-NG
-                encoding:
-                  type: string
-                  enum: [LINEAR16, FLAC, AMR, AMR_WB, OGG_OPUS, WEBM_OPUS, MP3]
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  transcript:
-                    type: string
-                  confidence:
-                    type: number
       summary: Health check
+      description: Check API health and version
       operationId: getHealth
+      security: []
       responses:
         '200':
           description: OK
@@ -84,4 +38,1061 @@ paths:
                     enum: [ok]
                   version:
                     type: string
+                  timestamp:
+                    type: string
+                    format: date-time
 
+  # Authentication Endpoints
+  /api/auth/register:
+    post:
+      summary: Register new user
+      description: |
+        Register a new user with email and password. Creates user profile in MongoDB
+        with default free tier subscription. Password is hashed using bcrypt.
+      operationId: registerUser
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: User's password (minimum 8 characters)
+                name:
+                  type: string
+                  description: User's display name
+                preferences:
+                  $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+                  token:
+                    type: string
+                    description: JWT token for authentication
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/auth/login:
+    post:
+      summary: Login user
+      description: |
+        Authenticate user with email and password. Returns user profile data and JWT token.
+      operationId: loginUser
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                password:
+                  type: string
+                  format: password
+                  description: User's password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+                  token:
+                    type: string
+                    description: JWT token for authentication
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh user token
+      description: |
+        Refresh JWT token and get updated user profile data.
+        Requires valid JWT token in Authorization header.
+      operationId: refreshToken
+      tags: [Authentication]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/auth/profile:
+    get:
+      summary: Get user profile
+      description: Get current authenticated user's profile information
+      operationId: getUserProfile
+      tags: [Authentication]
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update user profile
+      description: Update current user's profile information
+      operationId: updateUserProfile
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: User's display name
+                preferences:
+                  $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/auth/usage:
+    get:
+      summary: Get user usage statistics
+      description: Get current user's usage statistics and limits
+      operationId: getUserUsage
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Usage statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stats:
+                    $ref: '#/components/schemas/UsageStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/auth/subscription/tiers:
+    get:
+      summary: Get subscription tiers
+      description: Get available subscription tiers and their features
+      operationId: getSubscriptionTiers
+      tags: [Subscription]
+      security: []
+      responses:
+        '200':
+          description: Subscription tiers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  tiers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SubscriptionTier'
+
+  /api/auth/subscription/upgrade:
+    post:
+      summary: Upgrade subscription
+      description: Upgrade user to a higher subscription tier
+      operationId: upgradeSubscription
+      tags: [Subscription]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tier]
+              properties:
+                tier:
+                  type: string
+                  enum: [basic, gold, premium]
+                  description: Target subscription tier
+                paymentMethod:
+                  $ref: '#/components/schemas/PaymentMethod'
+      responses:
+        '200':
+          description: Subscription upgraded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/subscription/cancel:
+    post:
+      summary: Cancel subscription
+      description: Cancel current user's subscription
+      operationId: cancelSubscription
+      tags: [Subscription]
+      responses:
+        '200':
+          description: Subscription cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Points System Endpoints
+  /api/points/balance:
+    get:
+      summary: Get points balance
+      description: Get current user's points balance and limits
+      operationId: getPointsBalance
+      tags: [Points]
+      responses:
+        '200':
+          description: Points balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  points:
+                    type: integer
+                  tier:
+                    type: string
+                  limits:
+                    $ref: '#/components/schemas/PointsLimits'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/points/actions:
+    get:
+      summary: Get available points actions
+      description: Get list of actions that can be performed with points
+      operationId: getPointsActions
+      tags: [Points]
+      security: []
+      responses:
+        '200':
+          description: Points actions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PointsAction'
+
+  /api/points/watch-ad:
+    post:
+      summary: Watch rewarded ad
+      description: Record ad watch and award points to user
+      operationId: watchAd
+      tags: [Points]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adId]
+              properties:
+                adId:
+                  type: string
+                  description: Unique identifier for the ad
+      responses:
+        '200':
+          description: Points awarded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  pointsEarned:
+                    type: integer
+                  newBalance:
+                    type: integer
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/points/summarize:
+    post:
+      summary: Generate summary using points
+      description: Generate a summary for short transcripts using points
+      operationId: summarizeWithPoints
+      tags: [Points]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                transcriptId:
+                  type: string
+                content:
+                  type: string
+                  description: Transcript content to summarize
+                duration:
+                  type: number
+                  description: Duration in seconds (max 60 for short summary)
+      responses:
+        '200':
+          description: Summary generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  summary:
+                    type: string
+                  pointsSpent:
+                    type: integer
+                  remainingPoints:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/InsufficientPoints'
+
+  /api/points/punctuation:
+    post:
+      summary: Fix punctuation using points
+      description: Fix punctuation and grammar for one paragraph using points
+      operationId: fixPunctuationWithPoints
+      tags: [Points]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: Text to fix punctuation (max 500 characters)
+      responses:
+        '200':
+          description: Punctuation fixed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  originalContent:
+                    type: string
+                  fixedContent:
+                    type: string
+                  pointsSpent:
+                    type: integer
+                  remainingPoints:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/InsufficientPoints'
+
+  /api/points/translate:
+    post:
+      summary: Translate content using points
+      description: Translate short text using points
+      operationId: translateWithPoints
+      tags: [Points]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, targetLanguage]
+              properties:
+                content:
+                  type: string
+                  description: Text to translate
+                targetLanguage:
+                  type: string
+                  enum: [ha-NG, en-US, fr-FR, ar]
+                  description: Target language for translation
+                duration:
+                  type: number
+                  description: Duration in seconds (max 60 for short translation)
+      responses:
+        '200':
+          description: Translation completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  originalContent:
+                    type: string
+                  translatedContent:
+                    type: string
+                  targetLanguage:
+                    type: string
+                  pointsSpent:
+                    type: integer
+                  remainingPoints:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/InsufficientPoints'
+
+  # Transcription Endpoints
+  /api/stt/transcribe:
+    post:
+      summary: Transcribe audio file
+      description: |
+        Transcribe an uploaded audio file to text. Supports various audio formats.
+        Usage limits apply based on subscription tier.
+      operationId: transcribeFile
+      tags: [Transcription]
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: Audio file to transcribe
+                sampleRateHertz:
+                  type: integer
+                  description: Sample rate of the audio
+                languageCode:
+                  type: string
+                  enum: [ha-NG, en-US, fr-FR, ar]
+                  default: ha-NG
+                  description: Language code for transcription
+                encoding:
+                  type: string
+                  enum: [LINEAR16, FLAC, AMR, AMR_WB, OGG_OPUS, WEBM_OPUS, MP3]
+                  description: Audio encoding format
+      responses:
+        '200':
+          description: Transcription completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transcript:
+                    type: string
+                    description: Transcribed text
+                  confidence:
+                    type: number
+                    description: Confidence score (0-1)
+                  id:
+                    type: string
+                    description: Unique transcript ID
+                  duration:
+                    type: number
+                    description: Audio duration in seconds
+                  isPremium:
+                    type: boolean
+                    description: Whether this was created with premium features
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/UsageLimitExceeded'
+        '413':
+          $ref: '#/components/responses/FileTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/transcripts:
+    get:
+      summary: List user transcripts
+      description: Get list of transcripts for the current user
+      operationId: listTranscripts
+      tags: [Transcripts]
+      security: []
+      responses:
+        '200':
+          description: Transcripts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transcript'
+
+  /api/transcripts/{id}:
+    get:
+      summary: Get transcript by ID
+      description: Get a specific transcript by its ID
+      operationId: getTranscript
+      tags: [Transcripts]
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Transcript ID
+      responses:
+        '200':
+          description: Transcript retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transcript'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete transcript
+      description: Delete a specific transcript by its ID
+      operationId: deleteTranscript
+      tags: [Transcripts]
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Transcript ID
+      responses:
+        '204':
+          description: Transcript deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token for MongoDB authentication
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for service-to-service authentication
+
+  schemas:
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique user ID
+        email:
+          type: string
+          format: email
+          description: User's email address
+        name:
+          type: string
+          description: User's display name
+        subscriptionTier:
+          type: string
+          enum: [free, basic, gold, premium]
+          description: Current subscription tier
+        subscriptionStatus:
+          type: string
+          enum: [active, cancelled, expired, trial]
+          description: Subscription status
+        pointsBalance:
+          type: integer
+          description: Current points balance
+        isPremium:
+          type: boolean
+          description: Whether user has premium features
+        usageStats:
+          $ref: '#/components/schemas/UsageStats'
+
+    UsageStats:
+      type: object
+      properties:
+        dailyMinutes:
+          type: integer
+          description: Minutes used today
+        monthlyMinutes:
+          type: integer
+          description: Minutes used this month
+        totalMinutes:
+          type: integer
+          description: Total minutes used
+        transcriptsCount:
+          type: integer
+          description: Total transcripts created
+
+    UserPreferences:
+      type: object
+      properties:
+        language:
+          type: string
+          enum: [ha-NG, en-US, fr-FR, ar]
+          description: Preferred language
+        theme:
+          type: string
+          enum: [light, dark]
+          description: UI theme preference
+        autoPunctuation:
+          type: boolean
+          description: Enable automatic punctuation
+        cloudSync:
+          type: boolean
+          description: Enable cloud synchronization
+
+    UserRegistrationData:
+      type: object
+      properties:
+        name:
+          type: string
+          description: User's display name
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    SubscriptionTier:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Tier identifier
+        name:
+          type: string
+          description: Display name
+        price:
+          type: integer
+          description: Price in cents
+        currency:
+          type: string
+          description: Currency code
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+          description: Billing cycle
+        features:
+          $ref: '#/components/schemas/TierFeatures'
+        limits:
+          $ref: '#/components/schemas/TierLimits'
+        description:
+          type: string
+          description: Tier description
+
+    TierFeatures:
+      type: object
+      properties:
+        dailyMinutes:
+          type: integer
+          description: Daily transcription minutes limit (-1 for unlimited)
+        monthlyMinutes:
+          type: integer
+          description: Monthly transcription minutes limit (-1 for unlimited)
+        maxFileSize:
+          type: integer
+          description: Maximum file size in MB
+        maxTranscripts:
+          type: integer
+          description: Maximum transcripts stored (-1 for unlimited)
+        exportFormats:
+          type: array
+          items:
+            type: string
+          description: Available export formats
+        aiFeatures:
+          type: array
+          items:
+            type: string
+          description: Available AI features
+        cloudSync:
+          type: boolean
+          description: Cloud synchronization enabled
+        offlineMode:
+          type: boolean
+          description: Offline mode available
+        prioritySupport:
+          type: boolean
+          description: Priority support available
+        apiAccess:
+          type: boolean
+          description: API access available
+
+    TierLimits:
+      type: object
+      properties:
+        dailyAdWatches:
+          type: integer
+          description: Maximum ads per day
+        pointsPerAd:
+          type: integer
+          description: Points earned per ad
+        maxPointsBalance:
+          type: integer
+          description: Maximum points balance
+
+    PaymentMethod:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [card, paypal, apple, google]
+          description: Payment method type
+        last4:
+          type: string
+          description: Last 4 digits of card
+        brand:
+          type: string
+          description: Card brand
+
+    PointsLimits:
+      type: object
+      properties:
+        dailyAdWatches:
+          type: integer
+          description: Maximum ads per day
+        maxPointsBalance:
+          type: integer
+          description: Maximum points balance
+
+    PointsAction:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Action identifier
+        name:
+          type: string
+          description: Display name
+        cost:
+          type: integer
+          description: Points cost
+        description:
+          type: string
+          description: Action description
+        requirements:
+          $ref: '#/components/schemas/ActionRequirements'
+
+    ActionRequirements:
+      type: object
+      properties:
+        minTier:
+          type: string
+          description: Minimum subscription tier required
+        maxDuration:
+          type: integer
+          description: Maximum duration in seconds
+        maxLength:
+          type: integer
+          description: Maximum content length in characters
+
+    Transcript:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique transcript ID
+        userId:
+          type: string
+          description: User ID who created the transcript
+        title:
+          type: string
+          description: Transcript title
+        content:
+          type: string
+          description: Transcribed text content
+        timestamp:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        duration:
+          type: number
+          description: Audio duration in seconds
+        language:
+          type: string
+          enum: [ha-NG, en-US, fr-FR, ar]
+          description: Language of the transcript
+        source:
+          type: string
+          enum: [live, file_upload]
+          description: Source of the transcript
+        isPremium:
+          type: boolean
+          description: Whether created with premium features
+        tags:
+          type: array
+          items:
+            type: string
+          description: Transcript tags
+        isCloudSynced:
+          type: boolean
+          description: Whether synced to cloud
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    InsufficientPoints:
+      description: Insufficient points
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+                properties:
+                  actionId:
+                    type: string
+                  cost:
+                    type: integer
+                  remainingPoints:
+                    type: integer
+                  reason:
+                    type: string
+
+    UsageLimitExceeded:
+      description: Usage limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+                properties:
+                  reason:
+                    type: string
+                  remainingMinutes:
+                    type: integer
+                  tier:
+                    type: string
+                  resetTime:
+                    type: string
+                    format: date-time
+
+    FileTooLarge:
+      description: File too large
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+                properties:
+                  fileSize:
+                    type: number
+                  maxSize:
+                    type: number
+                  tier:
+                    type: string
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+tags:
+  - name: Authentication
+    description: User authentication and profile management
+  - name: Subscription
+    description: Subscription tier management
+  - name: Points
+    description: Points system and micro-transactions
+  - name: Transcription
+    description: Audio transcription services
+  - name: Transcripts
+    description: Transcript management

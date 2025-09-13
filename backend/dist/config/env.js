@@ -17,8 +17,10 @@ const envSchema = zod_1.z.object({
     FIREBASE_CLIENT_EMAIL: zod_1.z.string().optional(),
     FIREBASE_PRIVATE_KEY: zod_1.z.string().optional(),
     ENABLE_FIREBASE: zod_1.z.string().default('false'),
-    STORAGE_PROVIDER: zod_1.z.enum(['memory', 'sqlite', 'firebase']).default('memory'),
+    MONGODB_URI: zod_1.z.string().default('mongodb://localhost:27017/hausa-speech'),
+    STORAGE_PROVIDER: zod_1.z.enum(['memory', 'sqlite', 'firebase', 'mongodb']).default('mongodb'),
     GCS_BUCKET: zod_1.z.string().optional(),
+    JWT_SECRET: zod_1.z.string().default('your-secret-key-change-in-production'),
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {

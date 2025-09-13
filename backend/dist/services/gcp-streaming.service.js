@@ -6,12 +6,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GcpStreamingTranscriptionService = void 0;
 const path_1 = __importDefault(require("path"));
 const speech_1 = require("@google-cloud/speech");
+const logger_1 = require("../config/logger");
 class GcpStreamingTranscriptionService {
     constructor(keyFilename) {
         this.sessions = new Map();
+        const adcPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
         const defaultPath = path_1.default.join(process.cwd(), 'hausa-text-f0bae78a7264.json');
         const credsPath = keyFilename || defaultPath;
-        this.client = new speech_1.SpeechClient({ keyFilename: credsPath });
+        if (adcPath) {
+            this.client = new speech_1.SpeechClient({ keyFilename: adcPath });
+            logger_1.logger.info({ creds: 'ADC', path: adcPath }, 'Using GOOGLE_APPLICATION_CREDENTIALS');
+        }
+        else {
+            this.client = new speech_1.SpeechClient({ keyFilename: credsPath });
+            logger_1.logger.info({ creds: 'keyFilename', path: credsPath }, 'Using key file');
+        }
     }
     startSession(userId, mode, onUpdate) {
         const sessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .result { margin-top: 10px; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Hausa Speech-to-Text Test Page</h1>
+    
+    <div class="test-section">
+        <h2>1. Basic JavaScript Test</h2>
+        <button onclick="testBasicJS()">Test JavaScript</button>
+        <div id="jsResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Tab Switching Test</h2>
+        <div style="margin-bottom: 10px;">
+            <button onclick="showTab('login')" id="loginTab">Login</button>
+            <button onclick="showTab('register')" id="registerTab">Register</button>
+        </div>
+        <div id="loginContent" style="display: block; padding: 10px; border: 1px solid #ddd;">
+            <h3>Login Form</h3>
+            <input type="email" id="testEmail" placeholder="Email" style="width: 200px; padding: 5px; margin: 5px;">
+            <input type="password" id="testPassword" placeholder="Password" style="width: 200px; padding: 5px; margin: 5px;">
+            <button onclick="testLogin()">Test Login</button>
+        </div>
+        <div id="registerContent" style="display: none; padding: 10px; border: 1px solid #ddd;">
+            <h3>Register Form</h3>
+            <input type="text" id="testName" placeholder="Name" style="width: 200px; padding: 5px; margin: 5px;">
+            <input type="email" id="testRegEmail" placeholder="Email" style="width: 200px; padding: 5px; margin: 5px;">
+            <input type="password" id="testRegPassword" placeholder="Password" style="width: 200px; padding: 5px; margin: 5px;">
+            <button onclick="testRegister()">Test Register</button>
+        </div>
+        <div id="tabResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. API Test</h2>
+        <button onclick="testAPI()">Test API Connection</button>
+        <div id="apiResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Console Log</h2>
+        <div id="consoleLog" class="result" style="height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+    </div>
+
+    <script>
+        // Override console.log to show in the page
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const logDiv = document.getElementById('consoleLog');
+            logDiv.innerHTML += args.join(' ') + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+
+        function testBasicJS() {
+            console.log('Testing basic JavaScript...');
+            document.getElementById('jsResult').innerHTML = '✅ JavaScript is working!';
+        }
+
+        function showTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            
+            // Hide all content
+            document.getElementById('loginContent').style.display = 'none';
+            document.getElementById('registerContent').style.display = 'none';
+            
+            // Remove active class from all tabs
+            document.getElementById('loginTab').style.backgroundColor = '';
+            document.getElementById('registerTab').style.backgroundColor = '';
+            
+            // Show selected content
+            if (tabName === 'login') {
+                document.getElementById('loginContent').style.display = 'block';
+                document.getElementById('loginTab').style.backgroundColor = '#e0e0e0';
+            } else {
+                document.getElementById('registerContent').style.display = 'block';
+                document.getElementById('registerTab').style.backgroundColor = '#e0e0e0';
+            }
+            
+            document.getElementById('tabResult').innerHTML = '✅ Tab switched to: ' + tabName;
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            
+            console.log('Testing login with:', email);
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                console.log('Login response:', data);
+                
+                if (data.success) {
+                    document.getElementById('tabResult').innerHTML = '✅ Login successful! User: ' + data.user.name;
+                } else {
+                    document.getElementById('tabResult').innerHTML = '❌ Login failed: ' + (data.message || data.error);
+                }
+            } catch (error) {
+                console.log('Login error:', error);
+                document.getElementById('tabResult').innerHTML = '❌ Network error: ' + error.message;
+            }
+        }
+
+        async function testRegister() {
+            const name = document.getElementById('testName').value;
+            const email = document.getElementById('testRegEmail').value;
+            const password = document.getElementById('testRegPassword').value;
+            
+            console.log('Testing registration with:', email);
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+                
+                const data = await response.json();
+                console.log('Registration response:', data);
+                
+                if (data.success) {
+                    document.getElementById('tabResult').innerHTML = '✅ Registration successful! User: ' + data.user.name;
+                } else {
+                    document.getElementById('tabResult').innerHTML = '❌ Registration failed: ' + (data.message || data.error);
+                }
+            } catch (error) {
+                console.log('Registration error:', error);
+                document.getElementById('tabResult').innerHTML = '❌ Network error: ' + error.message;
+            }
+        }
+
+        async function testAPI() {
+            console.log('Testing API connection...');
+            
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                console.log('Health check response:', data);
+                
+                if (data.status === 'ok') {
+                    document.getElementById('apiResult').innerHTML = '✅ API is working! Status: ' + data.status;
+                } else {
+                    document.getElementById('apiResult').innerHTML = '❌ API returned unexpected status: ' + data.status;
+                }
+            } catch (error) {
+                console.log('API test error:', error);
+                document.getElementById('apiResult').innerHTML = '❌ API connection failed: ' + error.message;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Test page loaded successfully');
+            testBasicJS();
+            testAPI();
+        });
+    </script>
+</body>
+</html>
+
