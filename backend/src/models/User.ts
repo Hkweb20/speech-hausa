@@ -15,6 +15,9 @@ export interface IUser extends Document {
     totalMinutes: number;
     transcriptsCount: number;
     lastResetDate: Date;
+    dailyAIRequests: number;
+    monthlyAIRequests: number;
+    totalAIRequests: number;
   };
   pointsBalance: number;
   pointsHistory: Array<{
@@ -61,7 +64,10 @@ const UserSchema = new Schema<IUser>({
     monthlyMinutes: { type: Number, default: 0 },
     totalMinutes: { type: Number, default: 0 },
     transcriptsCount: { type: Number, default: 0 },
-    lastResetDate: { type: Date, default: Date.now }
+    lastResetDate: { type: Date, default: Date.now },
+    dailyAIRequests: { type: Number, default: 0 },
+    monthlyAIRequests: { type: Number, default: 0 },
+    totalAIRequests: { type: Number, default: 0 }
   },
   pointsBalance: { type: Number, default: 0 },
   pointsHistory: [{

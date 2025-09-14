@@ -14,6 +14,8 @@ export interface SubscriptionTier {
     offlineMode: boolean;
     prioritySupport: boolean;
     apiAccess: boolean;
+    dailyAIRequests: number;
+    monthlyAIRequests: number;
   };
   limits: {
     dailyAdWatches: number;
@@ -39,7 +41,9 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       cloudSync: false,
       offlineMode: false,
       prioritySupport: false,
-      apiAccess: false
+      apiAccess: false,
+      dailyAIRequests: 5,
+      monthlyAIRequests: 150
     },
     limits: {
       dailyAdWatches: 5, // 5 ads per day = 50 points
@@ -63,7 +67,9 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       cloudSync: true,
       offlineMode: false,
       prioritySupport: false,
-      apiAccess: false
+      apiAccess: false,
+      dailyAIRequests: 20,
+      monthlyAIRequests: 600
     },
     limits: {
       dailyAdWatches: 0, // no ads
@@ -94,7 +100,9 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       cloudSync: true,
       offlineMode: true, // optional Whisper download
       prioritySupport: true,
-      apiAccess: false
+      apiAccess: false,
+      dailyAIRequests: 100,
+      monthlyAIRequests: 3000
     },
     limits: {
       dailyAdWatches: 0, // no ads
@@ -128,7 +136,9 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       cloudSync: true,
       offlineMode: true,
       prioritySupport: true,
-      apiAccess: true
+      apiAccess: true,
+      dailyAIRequests: -1, // unlimited
+      monthlyAIRequests: -1 // unlimited
     },
     limits: {
       dailyAdWatches: 0, // no ads

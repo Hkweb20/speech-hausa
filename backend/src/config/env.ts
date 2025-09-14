@@ -17,6 +17,7 @@ const envSchema = z.object({
   STORAGE_PROVIDER: z.enum(['memory', 'sqlite', 'firebase', 'mongodb']).default('mongodb'),
   GCS_BUCKET: z.string().optional(),
   JWT_SECRET: z.string().default('your-secret-key-change-in-production'),
+  GEMINI_API_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

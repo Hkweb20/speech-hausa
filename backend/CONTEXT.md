@@ -7,9 +7,9 @@
 ---
 
 ## 1. 🎯 Purpose  
-The app helps **Hausa-speaking users** transcribe their voice into text in real-time. It supports live microphone transcription, audio file uploads, and premium AI features such as translation, summarization, and offline transcription.  
+The app helps **Hausa-speaking users** transcribe their voice into text in real-time. It supports live microphone transcription, audio file uploads, and premium AI features such as translation, summarization, qa and offline transcription.  
 
----
+1 ---
 
 ## 2. 🧑‍🤝‍🧑 Target Audience  
 - **Students**: transcribe lectures in Hausa.  

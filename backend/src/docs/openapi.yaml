@@ -696,6 +696,291 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # AI Processing Endpoints
+  /api/ai/summarize:
+    post:
+      summary: Summarize transcribed text
+      description: Generate a summary of transcribed Hausa text using Gemini AI
+      operationId: summarizeText
+      tags:
+        - AI Processing
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: Hausa text to summarize
+                  minLength: 10
+                  example: "Barka da wannan rana ta jumua allah ya maimaitamana"
+      responses:
+        '200':
+          description: Text summarized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  summary:
+                    type: string
+                    description: Generated summary in Hausa
+                    example: "Barka da rana ta Juma'a mai albarka. Allah ya maimaita mana wannan rana lafiya."
+                  originalText:
+                    type: string
+                    description: Original input text
+                  summaryLength:
+                    type: number
+                    description: Length of summary
+                  originalLength:
+                    type: number
+                    description: Length of original text
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: AI usage limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "AI usage limit exceeded"
+                  code:
+                    type: string
+                    example: "AI_USAGE_LIMIT_EXCEEDED"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/ai/format:
+    post:
+      summary: Format text for social media platform
+      description: Format Hausa text for specific social media platforms using Gemini AI
+      operationId: formatForPlatform
+      tags:
+        - AI Processing
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - platform
+              properties:
+                text:
+                  type: string
+                  description: Hausa text to format
+                  minLength: 10
+                  example: "Barka da wannan rana ta jumua allah ya maimaitamana"
+                platform:
+                  type: string
+                  enum: [facebook, whatsapp, x, instagram, telegram]
+                  description: Target social media platform
+                  example: "facebook"
+      responses:
+        '200':
+          description: Text formatted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  formattedText:
+                    type: string
+                    description: Formatted text for the platform
+                    example: "Barka da Juma'a! 🕌✨\n\nRanar Juma'a, rana ce ta musamman..."
+                  platform:
+                    type: string
+                    example: "facebook"
+                  originalText:
+                    type: string
+                    description: Original input text
+                  formattedLength:
+                    type: number
+                    description: Length of formatted text
+                  originalLength:
+                    type: number
+                    description: Length of original text
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: AI usage limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "AI usage limit exceeded"
+                  code:
+                    type: string
+                    example: "AI_USAGE_LIMIT_EXCEEDED"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/ai/format-all:
+    post:
+      summary: Format text for all social media platforms
+      description: Format Hausa text for all social media platforms at once using Gemini AI
+      operationId: formatForAllPlatforms
+      tags:
+        - AI Processing
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: Hausa text to format
+                  minLength: 10
+                  example: "Barka da wannan rana ta jumua allah ya maimaitamana"
+      responses:
+        '200':
+          description: Text formatted for all platforms successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  formattedTexts:
+                    type: object
+                    properties:
+                      facebook:
+                        type: string
+                        description: Facebook formatted text
+                      whatsapp:
+                        type: string
+                        description: WhatsApp formatted text
+                      x:
+                        type: string
+                        description: X (Twitter) formatted text
+                      instagram:
+                        type: string
+                        description: Instagram formatted text
+                      telegram:
+                        type: string
+                        description: Telegram formatted text
+                  originalText:
+                    type: string
+                    description: Original input text
+                  originalLength:
+                    type: number
+                    description: Length of original text
+                  platforms:
+                    type: array
+                    items:
+                      type: string
+                    example: ["facebook", "whatsapp", "x", "instagram", "telegram"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: AI usage limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "AI usage limit exceeded"
+                  code:
+                    type: string
+                    example: "AI_USAGE_LIMIT_EXCEEDED"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/ai/usage:
+    get:
+      summary: Get AI usage statistics
+      description: Get current user's AI usage limits and remaining requests
+      operationId: getAIUsage
+      tags:
+        - AI Processing
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: AI usage statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  usage:
+                    type: object
+                    properties:
+                      dailyRequests:
+                        type: number
+                        description: AI requests used today
+                        example: 3
+                      monthlyRequests:
+                        type: number
+                        description: AI requests used this month
+                        example: 45
+                      totalRequests:
+                        type: number
+                        description: Total AI requests ever used
+                        example: 150
+                      remainingRequests:
+                        type: number
+                        description: Remaining AI requests
+                        example: 2
+                      tier:
+                        type: string
+                        description: User's subscription tier
+                        example: "free"
+                      resetTime:
+                        type: string
+                        format: date-time
+                        description: When usage resets
+                        example: "2025-09-14T00:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1085,6 +1370,303 @@ components:
               code:
                 type: string
 
+  # Translation Endpoints
+  /api/translation/translate:
+    post:
+      summary: Translate Hausa text to target language
+      description: |
+        Translate Hausa text to English, French, or Arabic using Google Translate API.
+        Supports usage limits based on subscription tier.
+      operationId: translateText
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - targetLanguage
+              properties:
+                text:
+                  type: string
+                  description: Hausa text to translate
+                  example: "Ina son ruwa"
+                  minLength: 3
+                targetLanguage:
+                  type: string
+                  enum: [en, fr, ar]
+                  description: Target language code
+                  example: "en"
+      responses:
+        '200':
+          description: Translation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  originalText:
+                    type: string
+                    example: "Ina son ruwa"
+                  translatedText:
+                    type: string
+                    example: "I want water"
+                  targetLanguage:
+                    type: string
+                    example: "en"
+                  languageName:
+                    type: string
+                    example: "English"
+                  originalLength:
+                    type: integer
+                    example: 12
+                  translatedLength:
+                    type: integer
+                    example: 13
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/UsageLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/translation/tts:
+    post:
+      summary: Convert text to speech
+      description: |
+        Convert text to speech using Google Text-to-Speech API.
+        Supports multiple voices and languages.
+      operationId: textToSpeech
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - languageCode
+              properties:
+                text:
+                  type: string
+                  description: Text to convert to speech
+                  example: "I want water"
+                  minLength: 3
+                languageCode:
+                  type: string
+                  enum: [en-US, fr-FR, ar-XA]
+                  description: TTS language code
+                  example: "en-US"
+                voiceName:
+                  type: string
+                  description: Specific voice name (optional)
+                  example: "en-US-Wavenet-A"
+      responses:
+        '200':
+          description: Audio generated successfully
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/UsageLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/translation/translate-and-speak:
+    post:
+      summary: Complete translation pipeline
+      description: |
+        Complete translation pipeline: translate Hausa text to target language
+        and convert to speech in one request.
+      operationId: translateAndSpeak
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - targetLanguage
+              properties:
+                text:
+                  type: string
+                  description: Hausa text to translate and speak
+                  example: "Ina son ruwa"
+                  minLength: 3
+                targetLanguage:
+                  type: string
+                  enum: [en, fr, ar]
+                  description: Target language code
+                  example: "en"
+                voiceName:
+                  type: string
+                  description: Specific voice name (optional)
+                  example: "en-US-Wavenet-A"
+      responses:
+        '200':
+          description: Translation and TTS successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  originalText:
+                    type: string
+                    example: "Ina son ruwa"
+                  translatedText:
+                    type: string
+                    example: "I want water"
+                  targetLanguage:
+                    type: string
+                    example: "en"
+                  languageName:
+                    type: string
+                    example: "English"
+                  languageCode:
+                    type: string
+                    example: "en-US"
+                  voiceUsed:
+                    type: string
+                    example: "en-US-Wavenet-A"
+                  audioSize:
+                    type: integer
+                    example: 15234
+                  originalLength:
+                    type: integer
+                    example: 12
+                  translatedLength:
+                    type: integer
+                    example: 13
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/UsageLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/translation/voices/{languageCode}:
+    get:
+      summary: Get available voices for language
+      description: |
+        Get list of available voices for a specific language code.
+      operationId: getAvailableVoices
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: languageCode
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [en-US, fr-FR, ar-XA]
+          description: TTS language code
+          example: "en-US"
+      responses:
+        '200':
+          description: Voices retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  languageCode:
+                    type: string
+                    example: "en-US"
+                  voices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: "en-US-Wavenet-A"
+                        gender:
+                          type: string
+                          example: "MALE"
+                        languageCode:
+                          type: string
+                          example: "en-US"
+                  voiceCount:
+                    type: integer
+                    example: 8
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/translation/languages:
+    get:
+      summary: Get supported languages
+      description: |
+        Get list of all supported languages for translation and TTS.
+      operationId: getSupportedLanguages
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Languages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  languages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          example: "en"
+                        name:
+                          type: string
+                          example: "English"
+                        ttsCode:
+                          type: string
+                          example: "en-US"
+                        flag:
+                          type: string
+                          example: "🇺🇸"
+                  totalLanguages:
+                    type: integer
+                    example: 3
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 tags:
   - name: Authentication
     description: User authentication and profile management
@@ -1096,3 +1678,7 @@ tags:
     description: Audio transcription services
   - name: Transcripts
     description: Transcript management
+  - name: AI Processing
+    description: AI-powered text summarization and social media formatting
+  - name: Translation
+    description: Hausa text translation and text-to-speech services

@@ -10,6 +10,14 @@ export interface UsageCheckResult {
   reason?: string;
 }
 
+export interface AIUsageCheckResult {
+  allowed: boolean;
+  remainingRequests: number;
+  tier: string;
+  resetTime?: Date;
+  reason?: string;
+}
+
 export class UsageService {
   /**
    * Check if user can perform transcription based on their subscription tier
@@ -388,6 +396,189 @@ export class UsageService {
     } catch (error) {
       logger.error({ error, userId }, 'Error getting user stats');
       return null;
+    }
+  }
+
+  /**
+   * Check if user can perform AI operations based on their subscription tier
+   */
+  async checkAIUsage(userId: string, requestedRequests: number = 1): Promise<AIUsageCheckResult> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return {
+          allowed: false,
+          remainingRequests: 0,
+          tier: 'free',
+          reason: 'User not found'
+        };
+      }
+
+      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const userLastReset = new Date(user.usageStats.lastResetDate);
+      
+      // Reset daily usage if it's a new day
+      if (userLastReset < today) {
+        user.usageStats.dailyAIRequests = 0;
+        user.usageStats.lastResetDate = today;
+        await user.save();
+      }
+
+      // Get AI limits based on tier
+      const dailyLimit = tier.features.dailyAIRequests || 5; // Default 5 for free users
+      const monthlyLimit = tier.features.monthlyAIRequests || 150; // Default 150 for free users
+
+      // Check daily limits
+      if (dailyLimit > 0) {
+        const remainingDaily = dailyLimit - user.usageStats.dailyAIRequests;
+        if (remainingDaily < requestedRequests) {
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return {
+            allowed: false,
+            remainingRequests: remainingDaily,
+            tier: user.subscriptionTier,
+            resetTime: tomorrow,
+            reason: 'Daily AI request limit exceeded'
+          };
+        }
+      }
+
+      // Check monthly limits
+      if (monthlyLimit > 0) {
+        const remainingMonthly = monthlyLimit - user.usageStats.monthlyAIRequests;
+        if (remainingMonthly < requestedRequests) {
+          const nextMonth = new Date(today);
+          nextMonth.setMonth(nextMonth.getDate() + 1);
+          return {
+            allowed: false,
+            remainingRequests: remainingMonthly,
+            tier: user.subscriptionTier,
+            resetTime: nextMonth,
+            reason: 'Monthly AI request limit exceeded'
+          };
+        }
+      }
+
+      return {
+        allowed: true,
+        remainingRequests: Math.min(
+          dailyLimit - user.usageStats.dailyAIRequests,
+          monthlyLimit - user.usageStats.monthlyAIRequests
+        ),
+        tier: user.subscriptionTier
+      };
+
+    } catch (error) {
+      logger.error({ error, userId }, 'Error checking AI usage');
+      return {
+        allowed: false,
+        remainingRequests: 0,
+        tier: 'free',
+        reason: 'Error checking usage limits'
+      };
+    }
+  }
+
+  /**
+   * Record AI usage for a user
+   */
+  async recordAIUsage(userId: string, requests: number = 1): Promise<void> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        logger.warn({ userId }, 'User not found when recording AI usage');
+        return;
+      }
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const userLastReset = new Date(user.usageStats.lastResetDate);
+      
+      // Reset daily usage if it's a new day
+      if (userLastReset < today) {
+        user.usageStats.dailyAIRequests = 0;
+        user.usageStats.lastResetDate = today;
+      }
+
+      // Update usage stats
+      user.usageStats.dailyAIRequests += requests;
+      user.usageStats.monthlyAIRequests += requests;
+      user.usageStats.totalAIRequests += requests;
+
+      await user.save();
+
+      logger.info({ 
+        userId, 
+        requests, 
+        dailyAIRequests: user.usageStats.dailyAIRequests,
+        monthlyAIRequests: user.usageStats.monthlyAIRequests
+      }, 'AI usage recorded');
+
+    } catch (error) {
+      logger.error({ error, userId, requests }, 'Error recording AI usage');
+    }
+  }
+
+  /**
+   * Get AI usage statistics for a user
+   */
+  async getAIUsage(userId: string): Promise<{
+    dailyRequests: number;
+    monthlyRequests: number;
+    totalRequests: number;
+    remainingRequests: number;
+    tier: string;
+    resetTime: Date | null;
+  }> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return {
+          dailyRequests: 0,
+          monthlyRequests: 0,
+          totalRequests: 0,
+          remainingRequests: 5,
+          tier: 'free',
+          resetTime: null
+        };
+      }
+
+      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const dailyLimit = tier.features.dailyAIRequests || 5;
+      const monthlyLimit = tier.features.monthlyAIRequests || 150;
+
+      const remainingRequests = Math.min(
+        dailyLimit - user.usageStats.dailyAIRequests,
+        monthlyLimit - user.usageStats.monthlyAIRequests
+      );
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      return {
+        dailyRequests: user.usageStats.dailyAIRequests,
+        monthlyRequests: user.usageStats.monthlyAIRequests,
+        totalRequests: user.usageStats.totalAIRequests,
+        remainingRequests: Math.max(0, remainingRequests),
+        tier: user.subscriptionTier,
+        resetTime: tomorrow
+      };
+
+    } catch (error) {
+      logger.error({ error, userId }, 'Error getting AI usage');
+      return {
+        dailyRequests: 0,
+        monthlyRequests: 0,
+        totalRequests: 0,
+        remainingRequests: 5,
+        tier: 'free',
+        resetTime: null
+      };
     }
   }
 }

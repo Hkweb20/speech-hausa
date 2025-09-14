@@ -332,6 +332,198 @@
       margin-left: 15px;
     }
 
+    /* AI Features Styles */
+    .ai-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .ai-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .ai-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .ai-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .ai-btn.loading {
+      background: #ffa500;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 90%;
+      max-height: 90%;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+      padding: 5px;
+    }
+
+    .close-btn:hover {
+      color: #333;
+    }
+
+    .ai-result {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-left: 4px solid #667eea;
+    }
+
+    .ai-result h4 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+
+    .ai-result-text {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #333;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .copy-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-top: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .copy-btn:hover {
+      background: #218838;
+      transform: translateY(-1px);
+    }
+
+    .copy-btn.copied {
+      background: #6c757d;
+    }
+
+    .platform-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .platform-tab {
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      color: #666;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .platform-tab.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .platform-content {
+      display: none;
+    }
+
+    .platform-content.active {
+      display: block;
+    }
+
+    .usage-info {
+      background: #e3f2fd;
+      border: 1px solid #bbdefb;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      color: #1565c0;
+    }
+
+    .usage-info.warning {
+      background: #fff3e0;
+      border-color: #ffcc02;
+      color: #e65100;
+    }
+
+    .usage-info.error {
+      background: #ffebee;
+      border-color: #f44336;
+      color: #c62828;
+    }
+
     @media (max-width: 768px) {
       .container {
         padding: 10px;
@@ -432,6 +624,15 @@
           </div>
           <div class="result-area" id="uploadResult">
             <div class="transcript-text">Your transcription will appear here...</div>
+            <div class="ai-buttons" id="uploadAiButtons" style="display: none;">
+              <button class="ai-btn" onclick="summarizeText('uploadResult')">📝 Summarize</button>
+              <button class="ai-btn" onclick="formatText('uploadResult', 'facebook')">📘 Facebook</button>
+              <button class="ai-btn" onclick="formatText('uploadResult', 'whatsapp')">💬 WhatsApp</button>
+              <button class="ai-btn" onclick="formatText('uploadResult', 'x')">🐦 X</button>
+              <button class="ai-btn" onclick="formatText('uploadResult', 'instagram')">📷 Instagram</button>
+              <button class="ai-btn" onclick="formatText('uploadResult', 'telegram')">✈️ Telegram</button>
+              <button class="ai-btn" onclick="formatAllText('uploadResult')">🌐 All Platforms</button>
+            </div>
           </div>
         </div>
 
@@ -446,6 +647,15 @@
           <audio id="playback" controls style="width: 100%; margin-bottom: 15px;"></audio>
           <div class="result-area" id="recordResult">
             <div class="transcript-text">Your live transcription will appear here...</div>
+            <div class="ai-buttons" id="recordAiButtons" style="display: none;">
+              <button class="ai-btn" onclick="summarizeText('recordResult')">📝 Summarize</button>
+              <button class="ai-btn" onclick="formatText('recordResult', 'facebook')">📘 Facebook</button>
+              <button class="ai-btn" onclick="formatText('recordResult', 'whatsapp')">💬 WhatsApp</button>
+              <button class="ai-btn" onclick="formatText('recordResult', 'x')">🐦 X</button>
+              <button class="ai-btn" onclick="formatText('recordResult', 'instagram')">📷 Instagram</button>
+              <button class="ai-btn" onclick="formatText('recordResult', 'telegram')">✈️ Telegram</button>
+              <button class="ai-btn" onclick="formatAllText('recordResult')">🌐 All Platforms</button>
+            </div>
           </div>
         </div>
 
@@ -466,8 +676,92 @@
             <button class="btn btn-primary" id="connectBtn">Connect</button>
             <button class="btn btn-secondary" id="disconnectBtn" disabled>Disconnect</button>
           </div>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <button class="btn btn-primary" id="startMicBtn" disabled>Start Mic</button>
+            <button class="btn btn-secondary" id="stopMicBtn" disabled>Stop Mic</button>
+            <button class="btn btn-secondary" id="endSessionBtn" disabled>End Session</button>
+          </div>
           <div class="result-area" id="streamResult">
-            <div class="transcript-text">Real-time transcription will appear here...</div>
+            <div style="margin-bottom: 20px;">
+              <h4 style="color: #667eea; margin-bottom: 10px;">📝 Current (Latest)</h4>
+              <div class="transcript-text" id="currentTranscript" style="background: #f0f8ff; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; min-height: 60px; font-style: italic; color: #666;">
+                Current speech will appear here...
+              </div>
+            </div>
+            <div>
+              <h4 style="color: #27ae60; margin-bottom: 10px;">📄 Complete Transcript</h4>
+              <div class="transcript-text" id="fullTranscript" style="background: #f0f9f4; padding: 15px; border-radius: 8px; border-left: 4px solid #27ae60; min-height: 120px; max-height: 300px; overflow-y: auto;">
+                Complete transcript will appear here...
+              </div>
+              <div class="ai-buttons" id="streamAiButtons" style="display: none; margin-top: 15px;">
+                <button class="ai-btn" onclick="summarizeText('streamResult')">📝 Summarize</button>
+                <button class="ai-btn" onclick="formatText('streamResult', 'facebook')">📘 Facebook</button>
+                <button class="ai-btn" onclick="formatText('streamResult', 'whatsapp')">💬 WhatsApp</button>
+                <button class="ai-btn" onclick="formatText('streamResult', 'x')">🐦 X</button>
+                <button class="ai-btn" onclick="formatText('streamResult', 'instagram')">📷 Instagram</button>
+                <button class="ai-btn" onclick="formatText('streamResult', 'telegram')">✈️ Telegram</button>
+                <button class="ai-btn" onclick="formatAllText('streamResult')">🌐 All Platforms</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Voice Translation Feature -->
+        <div class="feature-card">
+          <h3>🌍 Voice Translation</h3>
+          <p>Translate Hausa speech to English, French, or Arabic with real-time voice output. Complete translation pipeline in one click!</p>
+          
+          <!-- Language Selection -->
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: 500;">
+              Target Language:
+            </label>
+            <select id="translationLanguage" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+              <option value="en">🇺🇸 English</option>
+              <option value="fr">🇫🇷 French</option>
+              <option value="ar">🇸🇦 Arabic</option>
+            </select>
+          </div>
+
+          <!-- Voice Selection -->
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: 500;">
+              Voice Type:
+            </label>
+            <select id="translationVoice" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+              <option value="">Auto-select best voice</option>
+            </select>
+          </div>
+
+          <!-- Translation Controls -->
+          <div style="text-align: center; margin-bottom: 20px;">
+            <button class="btn btn-primary" id="startTranslationBtn">🎤 Start Translation</button>
+            <button class="btn btn-secondary" id="stopTranslationBtn" disabled>⏹️ Stop Translation</button>
+          </div>
+
+          <!-- Translation Input -->
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: 500;">
+              Or enter Hausa text:
+            </label>
+            <textarea id="translationTextInput" placeholder="Type Hausa text here..." style="width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; min-height: 80px; resize: vertical;"></textarea>
+            <button class="btn btn-primary" id="translateTextBtn" style="margin-top: 10px;">📝 Translate Text</button>
+          </div>
+
+          <!-- Translation Results -->
+          <div class="result-area" id="translationResult">
+            <div class="transcript-text">Translation results will appear here...</div>
+          </div>
+
+          <!-- Audio Player -->
+          <div id="translationAudioPlayer" style="display: none; margin-top: 15px;">
+            <h4 style="color: #667eea; margin-bottom: 10px;">🎧 Translated Audio:</h4>
+            <audio id="translationAudio" controls style="width: 100%; margin-bottom: 10px;"></audio>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="ai-btn" onclick="playTranslationAudio()">▶️ Play</button>
+              <button class="ai-btn" onclick="pauseTranslationAudio()">⏸️ Pause</button>
+              <button class="ai-btn" onclick="downloadTranslationAudio()">💾 Download</button>
+            </div>
           </div>
         </div>
 
@@ -493,6 +787,105 @@
     </div>
   </div>
 
+  <!-- AI Modals -->
+  
+  <!-- Summarize Modal -->
+  <div class="modal" id="summarizeModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📝 Text Summary</h3>
+        <button class="close-btn" onclick="closeModal('summarizeModal')">&times;</button>
+      </div>
+      <div id="summarizeUsageInfo" class="usage-info" style="display: none;"></div>
+      <div class="ai-result">
+        <h4>Original Text:</h4>
+        <div class="ai-result-text" id="summarizeOriginal"></div>
+      </div>
+      <div class="ai-result">
+        <h4>Summary (Hausa):</h4>
+        <div class="ai-result-text" id="summarizeResult"></div>
+        <button class="copy-btn" onclick="copyToClipboard('summarizeResult')">📋 Copy Summary</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Format Modal -->
+  <div class="modal" id="formatModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📱 Social Media Formatting</h3>
+        <button class="close-btn" onclick="closeModal('formatModal')">&times;</button>
+      </div>
+      <div id="formatUsageInfo" class="usage-info" style="display: none;"></div>
+      <div class="ai-result">
+        <h4>Original Text:</h4>
+        <div class="ai-result-text" id="formatOriginal"></div>
+      </div>
+      <div class="ai-result">
+        <h4>Formatted Text:</h4>
+        <div class="ai-result-text" id="formatResult"></div>
+        <button class="copy-btn" onclick="copyToClipboard('formatResult')">📋 Copy Formatted Text</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Format All Modal -->
+  <div class="modal" id="formatAllModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🌐 All Platforms Formatting</h3>
+        <button class="close-btn" onclick="closeModal('formatAllModal')">&times;</button>
+      </div>
+      <div id="formatAllUsageInfo" class="usage-info" style="display: none;"></div>
+      <div class="ai-result">
+        <h4>Original Text:</h4>
+        <div class="ai-result-text" id="formatAllOriginal"></div>
+      </div>
+      <div class="platform-tabs">
+        <button class="platform-tab active" onclick="showPlatform('facebook')">📘 Facebook</button>
+        <button class="platform-tab" onclick="showPlatform('whatsapp')">💬 WhatsApp</button>
+        <button class="platform-tab" onclick="showPlatform('x')">🐦 X (Twitter)</button>
+        <button class="platform-tab" onclick="showPlatform('instagram')">📷 Instagram</button>
+        <button class="platform-tab" onclick="showPlatform('telegram')">✈️ Telegram</button>
+      </div>
+      <div id="facebook" class="platform-content active">
+        <div class="ai-result">
+          <h4>Facebook Format:</h4>
+          <div class="ai-result-text" id="facebookResult"></div>
+          <button class="copy-btn" onclick="copyToClipboard('facebookResult')">📋 Copy</button>
+        </div>
+      </div>
+      <div id="whatsapp" class="platform-content">
+        <div class="ai-result">
+          <h4>WhatsApp Format:</h4>
+          <div class="ai-result-text" id="whatsappResult"></div>
+          <button class="copy-btn" onclick="copyToClipboard('whatsappResult')">📋 Copy</button>
+        </div>
+      </div>
+      <div id="x" class="platform-content">
+        <div class="ai-result">
+          <h4>X (Twitter) Format:</h4>
+          <div class="ai-result-text" id="xResult"></div>
+          <button class="copy-btn" onclick="copyToClipboard('xResult')">📋 Copy</button>
+        </div>
+      </div>
+      <div id="instagram" class="platform-content">
+        <div class="ai-result">
+          <h4>Instagram Format:</h4>
+          <div class="ai-result-text" id="instagramResult"></div>
+          <button class="copy-btn" onclick="copyToClipboard('instagramResult')">📋 Copy</button>
+        </div>
+      </div>
+      <div id="telegram" class="platform-content">
+        <div class="ai-result">
+          <h4>Telegram Format:</h4>
+          <div class="ai-result-text" id="telegramResult"></div>
+          <button class="copy-btn" onclick="copyToClipboard('telegramResult')">📋 Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     // Global variables
@@ -500,8 +893,41 @@
     let authToken = null;
     let mediaRecorder = null;
     let recordedChunks = [];
-    let liveSocket = null;
-    let liveSessionId = null;
+
+    // Load saved authentication state
+    function loadAuthState() {
+      const savedUser = localStorage.getItem('currentUser');
+      const savedToken = localStorage.getItem('authToken');
+      
+      if (savedUser && savedToken) {
+        try {
+          currentUser = JSON.parse(savedUser);
+          authToken = savedToken;
+          showUserInterface();
+          log('Authentication state restored from localStorage');
+        } catch (error) {
+          log('Error loading saved auth state: ' + error.message);
+          clearAuthState();
+        }
+      }
+    }
+
+    // Save authentication state
+    function saveAuthState() {
+      if (currentUser && authToken) {
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        localStorage.setItem('authToken', authToken);
+        log('Authentication state saved to localStorage');
+      }
+    }
+
+    // Clear authentication state
+    function clearAuthState() {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      currentUser = null;
+      authToken = null;
+    }
 
     // Utility functions
     function log(message) {
@@ -569,6 +995,7 @@
         if (data.success) {
           currentUser = data.user;
           authToken = data.token;
+          saveAuthState();
           showUserInterface();
           log('Login successful');
         } else {
@@ -614,6 +1041,7 @@
         if (data.success) {
           currentUser = data.user;
           authToken = data.token;
+          saveAuthState();
           showUserInterface();
           log('Registration successful');
         } else {
@@ -627,8 +1055,7 @@
     }
 
     function logout() {
-      currentUser = null;
-      authToken = null;
+      clearAuthState();
       document.getElementById('authSection').classList.remove('hidden');
       document.getElementById('userInfo').classList.remove('active');
       document.getElementById('mainContent').classList.remove('active');
@@ -658,25 +1085,38 @@
 
         const data = await response.json();
         if (data.success) {
-          const stats = data.stats;
+          const usage = data.stats.usage;
+          const points = data.stats.points;
+          const tier = data.stats.tier;
+          
           document.getElementById('userStats').innerHTML = `
             <div class="stat-item">
-              <div class="stat-value">${stats.dailyMinutes}</div>
+              <div class="stat-value">${usage.dailyMinutes}</div>
               <div class="stat-label">Daily Minutes</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">${stats.monthlyMinutes}</div>
+              <div class="stat-value">${usage.monthlyMinutes}</div>
               <div class="stat-label">Monthly Minutes</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">${stats.totalMinutes}</div>
+              <div class="stat-value">${usage.totalMinutes}</div>
               <div class="stat-label">Total Minutes</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">${stats.transcriptsCount}</div>
+              <div class="stat-value">${usage.transcriptsCount}</div>
               <div class="stat-label">Transcripts</div>
             </div>
+            <div class="stat-item">
+              <div class="stat-value">${points}</div>
+              <div class="stat-label">Points</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">${tier.toUpperCase()}</div>
+              <div class="stat-label">Tier</div>
+            </div>
           `;
+          
+          log('User stats loaded: ' + JSON.stringify(data.stats));
         }
       } catch (error) {
         log('Error loading user stats: ' + error.message);
@@ -742,6 +1182,7 @@
             <div class="transcript-text">${data.transcript}</div>
             <div class="success">Transcription completed successfully!</div>
           `;
+          showAiButtons('uploadResult');
           log('Transcription successful');
         } else {
           showError(data.message || 'Transcription failed', 'uploadResult');
@@ -820,6 +1261,7 @@
             <div class="transcript-text">${data.transcript}</div>
             <div class="success">Recording transcribed successfully!</div>
           `;
+          showAiButtons('recordResult');
           log('Recording transcription successful');
         } else {
           showError(data.message || 'Transcription failed', 'recordResult');
@@ -831,48 +1273,140 @@
       }
     }
 
+    // WebSocket streaming variables
+    let liveSocket = null;
+    let liveSessionId = null;
+    let recStream = null;
+    let liveCtx = null;
+    let liveSource = null;
+    let liveProcessor = null;
+    let canSend = false;
+    let fullTranscript = ''; // Stores complete transcript
+    let currentPartial = ''; // Stores current partial text
+
+    // Audio processing helpers
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onloadend = () => {
+          const dataUrl = reader.result;
+          const base64 = String(dataUrl).split(',')[1];
+          resolve(base64);
+        };
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function encodePCM16(float32) {
+      const buffer = new ArrayBuffer(float32.length * 2);
+      const view = new DataView(buffer);
+      for (let i = 0; i < float32.length; i++) {
+        let s = Math.max(-1, Math.min(1, float32[i]));
+        view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      }
+      return new Uint8Array(buffer);
+    }
+
+    function downsampleBuffer(float32, inRate, outRate) {
+      if (outRate === inRate) return float32;
+      const ratio = inRate / outRate;
+      const newLen = Math.floor(float32.length / ratio);
+      const result = new Float32Array(newLen);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+        let sum = 0;
+        let count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < float32.length; i++) {
+          sum += float32[i];
+          count++;
+        }
+        result[offsetResult] = sum / count;
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function uint8ToBase64(u8) {
+      let binary = '';
+      for (let i = 0; i < u8.byteLength; i++) binary += String.fromCharCode(u8[i]);
+      return btoa(binary);
+    }
+
     // WebSocket functions
     function connectWebSocket() {
       const mode = document.getElementById('streamMode').value;
       const isPremium = currentUser ? currentUser.isPremium : false;
       
-      liveSocket = io('/transcription', {
-        extraHeaders: { 'x-user-premium': isPremium.toString() }
-      });
+      // Reset transcripts
+      fullTranscript = '';
+      currentPartial = '';
+      document.getElementById('fullTranscript').textContent = 'Complete transcript will appear here...';
+      document.getElementById('currentTranscript').textContent = 'Current speech will appear here...';
+      
+      // Pass premium via query string for server gating
+      liveSocket = io(`/transcription?premium=${isPremium}`);
 
       liveSocket.on('connect', () => {
-        log('WebSocket connected');
+        log('[live] connected');
         liveSocket.emit('join_session', { mode });
       });
 
       liveSocket.on('session_status', (msg) => {
-        log('Session status: ' + JSON.stringify(msg));
+        log('[live] session_status ' + JSON.stringify(msg));
         liveSessionId = msg.sessionId;
         document.getElementById('connectBtn').disabled = true;
         document.getElementById('disconnectBtn').disabled = false;
+        document.getElementById('startMicBtn').disabled = false;
+        document.getElementById('endSessionBtn').disabled = false;
       });
 
       liveSocket.on('transcript_update', (msg) => {
-        const resultEl = document.getElementById('streamResult');
-        const currentText = resultEl.querySelector('.transcript-text').textContent;
-        const newText = msg.isFinal ? 
-          (currentText + (currentText ? ' ' : '') + msg.text) : 
-          (currentText + (currentText ? ' ' : '') + msg.text);
+        if (msg.isFinal) {
+          // Final text - add to complete transcript
+          fullTranscript += (fullTranscript ? ' ' : '') + msg.text;
+          currentPartial = ''; // Clear current partial
+          
+          // Update displays
+          document.getElementById('fullTranscript').textContent = fullTranscript;
+          document.getElementById('currentTranscript').textContent = 'Speaking...';
+          
+          // Show AI buttons when we have a complete transcript
+          if (fullTranscript.trim().length > 10) {
+            showAiButtons('streamResult');
+          }
+        } else {
+          // Partial text - show in current only
+          currentPartial = msg.text;
+          document.getElementById('currentTranscript').textContent = currentPartial || 'Listening...';
+        }
         
-        resultEl.innerHTML = `<div class="transcript-text">${newText}</div>`;
-        log('Transcript update: ' + msg.text);
+        log('[live] transcript_update: ' + msg.text + (msg.isFinal ? ' [FINAL]' : ' [PARTIAL]'));
+      });
+
+      liveSocket.on('ready', () => { 
+        canSend = true; 
+        log('[live] ready to send audio');
       });
 
       liveSocket.on('error', (err) => {
         showError('WebSocket error: ' + JSON.stringify(err), 'streamResult');
-        log('WebSocket error: ' + JSON.stringify(err));
+        log('[live] error ' + JSON.stringify(err));
       });
 
       liveSocket.on('disconnect', () => {
-        log('WebSocket disconnected');
+        log('[live] disconnected');
         document.getElementById('connectBtn').disabled = false;
         document.getElementById('disconnectBtn').disabled = true;
+        document.getElementById('startMicBtn').disabled = true;
+        document.getElementById('stopMicBtn').disabled = true;
+        document.getElementById('endSessionBtn').disabled = true;
       });
+
+      document.getElementById('connectBtn').disabled = true;
     }
 
     function disconnectWebSocket() {
@@ -881,6 +1415,81 @@
         liveSocket = null;
         liveSessionId = null;
       }
+      
+      // Reset transcripts
+      fullTranscript = '';
+      currentPartial = '';
+      document.getElementById('fullTranscript').textContent = 'Complete transcript will appear here...';
+      document.getElementById('currentTranscript').textContent = 'Current speech will appear here...';
+    }
+
+    async function startMicStream() {
+      try {
+        recStream = await navigator.mediaDevices.getUserMedia({
+          audio: { 
+            channelCount: 1, 
+            echoCancellation: true, 
+            noiseSuppression: true, 
+            autoGainControl: true 
+          },
+        });
+        
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        // Request 16k if possible
+        liveCtx = new AudioCtx({ sampleRate: 16000 });
+        liveSource = liveCtx.createMediaStreamSource(recStream);
+        const bufferSize = 1024; // ~64ms at 16k, reduces backpressure
+        liveProcessor = liveCtx.createScriptProcessor(bufferSize, 1, 1);
+        
+        liveProcessor.onaudioprocess = (e) => {
+          if (!liveSessionId) return;
+          const input = e.inputBuffer.getChannelData(0);
+          const desiredRate = 16000;
+          const inRate = liveCtx.sampleRate || desiredRate;
+          const ds = downsampleBuffer(input, inRate, desiredRate);
+          
+          if (canSend) {
+            canSend = false;
+            const pcm = encodePCM16(ds);
+            const b64 = uint8ToBase64(pcm);
+            liveSocket.emit('audio_chunk', { sessionId: liveSessionId, chunk: b64 });
+          }
+        };
+        
+        liveSource.connect(liveProcessor);
+        liveProcessor.connect(liveCtx.destination);
+        
+        document.getElementById('startMicBtn').disabled = true;
+        document.getElementById('stopMicBtn').disabled = false;
+        log('[live] microphone started');
+      } catch (e) {
+        showError('Microphone error: ' + e.message, 'streamResult');
+        log('[live] mic error ' + e.message);
+      }
+    }
+
+    async function stopMicStream() {
+      try {
+        document.getElementById('stopMicBtn').disabled = true;
+        if (liveProcessor) liveProcessor.disconnect();
+        if (liveSource) liveSource.disconnect();
+        if (liveCtx) await liveCtx.close();
+        if (recStream) recStream.getTracks().forEach(t => t.stop());
+        document.getElementById('startMicBtn').disabled = false;
+        log('[live] microphone stopped');
+      } catch (e) {
+        log('[live] stop mic error: ' + e.message);
+      }
+    }
+
+    function endSession() {
+      if (!liveSocket || !liveSessionId) return;
+      liveSocket.emit('end_session', { sessionId: liveSessionId });
+      if (liveProcessor) liveProcessor.disconnect();
+      if (liveSource) liveSource.disconnect();
+      if (liveCtx) liveCtx.close();
+      if (recStream) recStream.getTracks().forEach(t => t.stop());
+      log('[live] session ended');
     }
 
     // Points and premium functions
@@ -949,10 +1558,543 @@
       }
     }
 
+    // AI Functions
+    function getTranscriptText(resultAreaId) {
+      if (resultAreaId === 'streamResult') {
+        // For streaming, get the full transcript
+        return document.getElementById('fullTranscript').textContent.trim();
+      } else {
+        // For upload/record, get the transcript from the result area
+        const resultArea = document.getElementById(resultAreaId);
+        const transcriptElement = resultArea.querySelector('.transcript-text');
+        return transcriptElement ? transcriptElement.textContent.trim() : '';
+      }
+    }
+
+    function showAiButtons(resultAreaId) {
+      const aiButtons = document.getElementById(resultAreaId.replace('Result', 'AiButtons'));
+      if (aiButtons) {
+        aiButtons.style.display = 'flex';
+      }
+    }
+
+    function hideAiButtons(resultAreaId) {
+      const aiButtons = document.getElementById(resultAreaId.replace('Result', 'AiButtons'));
+      if (aiButtons) {
+        aiButtons.style.display = 'none';
+      }
+    }
+
+    function setButtonLoading(button, loading) {
+      if (loading) {
+        button.disabled = true;
+        button.classList.add('loading');
+        button.innerHTML = '⏳ Processing...';
+      } else {
+        button.disabled = false;
+        button.classList.remove('loading');
+        // Restore original text based on button content
+        const originalText = button.getAttribute('data-original') || button.textContent;
+        button.innerHTML = originalText;
+      }
+    }
+
+    async function summarizeText(resultAreaId) {
+      const text = getTranscriptText(resultAreaId);
+      if (!text || text.length < 10) {
+        showError('Please transcribe some audio first', resultAreaId);
+        return;
+      }
+
+      const button = event.target;
+      setButtonLoading(button, true);
+
+      try {
+        const response = await fetch('/api/ai/summarize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          document.getElementById('summarizeOriginal').textContent = text;
+          document.getElementById('summarizeResult').textContent = data.summary;
+          document.getElementById('summarizeModal').classList.add('active');
+          log('Text summarized successfully');
+        } else {
+          showError(data.error || 'Failed to summarize text', resultAreaId);
+          log('Summarize error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        showError('Network error: ' + error.message, resultAreaId);
+        log('Summarize network error: ' + error.message);
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+    async function formatText(resultAreaId, platform) {
+      const text = getTranscriptText(resultAreaId);
+      if (!text || text.length < 10) {
+        showError('Please transcribe some audio first', resultAreaId);
+        return;
+      }
+
+      const button = event.target;
+      setButtonLoading(button, true);
+
+      try {
+        const response = await fetch('/api/ai/format', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify({ text, platform })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          document.getElementById('formatOriginal').textContent = text;
+          document.getElementById('formatResult').textContent = data.formattedText;
+          document.getElementById('formatModal').classList.add('active');
+          log(`Text formatted for ${platform} successfully`);
+        } else {
+          showError(data.error || 'Failed to format text', resultAreaId);
+          log('Format error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        showError('Network error: ' + error.message, resultAreaId);
+        log('Format network error: ' + error.message);
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+    async function formatAllText(resultAreaId) {
+      const text = getTranscriptText(resultAreaId);
+      if (!text || text.length < 10) {
+        showError('Please transcribe some audio first', resultAreaId);
+        return;
+      }
+
+      const button = event.target;
+      setButtonLoading(button, true);
+
+      try {
+        const response = await fetch('/api/ai/format-all', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          document.getElementById('formatAllOriginal').textContent = text;
+          
+          // Populate all platform results
+          document.getElementById('facebookResult').textContent = data.formattedTexts.facebook;
+          document.getElementById('whatsappResult').textContent = data.formattedTexts.whatsapp;
+          document.getElementById('xResult').textContent = data.formattedTexts.x;
+          document.getElementById('instagramResult').textContent = data.formattedTexts.instagram;
+          document.getElementById('telegramResult').textContent = data.formattedTexts.telegram;
+          
+          document.getElementById('formatAllModal').classList.add('active');
+          log('Text formatted for all platforms successfully');
+        } else {
+          showError(data.error || 'Failed to format text', resultAreaId);
+          log('Format all error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        showError('Network error: ' + error.message, resultAreaId);
+        log('Format all network error: ' + error.message);
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+    // Modal functions
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function showPlatform(platform) {
+      // Hide all platform contents
+      document.querySelectorAll('.platform-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // Remove active class from all tabs
+      document.querySelectorAll('.platform-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show selected platform content
+      document.getElementById(platform).classList.add('active');
+      
+      // Add active class to clicked tab
+      event.target.classList.add('active');
+    }
+
+    // Copy to clipboard function
+    async function copyToClipboard(elementId) {
+      const element = document.getElementById(elementId);
+      const text = element.textContent;
+      
+      try {
+        await navigator.clipboard.writeText(text);
+        
+        // Show feedback
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied!';
+        button.classList.add('copied');
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.classList.remove('copied');
+        }, 2000);
+        
+        log('Text copied to clipboard');
+      } catch (error) {
+        log('Failed to copy text: ' + error.message);
+        showError('Failed to copy text', 'debugLog');
+      }
+    }
+
+    // Close modals when clicking outside
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal')) {
+        e.target.classList.remove('active');
+      }
+    });
+
+    // Translation Functions
+    let translationRecorder = null;
+    let translationChunks = [];
+    let currentTranslationAudio = null;
+
+    // Load available voices for selected language
+    async function loadVoicesForLanguage(languageCode) {
+      try {
+        const ttsCode = getTTSCode(languageCode);
+        const response = await fetch(`/api/translation/voices/${ttsCode}`, {
+          headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+        });
+
+        const data = await response.json();
+        const voiceSelect = document.getElementById('translationVoice');
+        
+        if (data.success) {
+          // Clear existing options except the first one
+          voiceSelect.innerHTML = '<option value="">Auto-select best voice</option>';
+          
+          // Add voice options
+          data.voices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = `${voice.gender} - ${voice.name}`;
+            voiceSelect.appendChild(option);
+          });
+          
+          log(`Loaded ${data.voiceCount} voices for ${languageCode}`);
+        }
+      } catch (error) {
+        log('Error loading voices: ' + error.message);
+      }
+    }
+
+    // Get TTS language code from translation language
+    function getTTSCode(languageCode) {
+      const ttsMap = {
+        'en': 'en-US',
+        'fr': 'fr-FR',
+        'ar': 'ar-XA'
+      };
+      return ttsMap[languageCode] || 'en-US';
+    }
+
+    // Start translation recording
+    async function startTranslation() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        translationChunks = [];
+        
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+          ? 'audio/webm;codecs=opus' 
+          : 'audio/webm';
+        
+        translationRecorder = new MediaRecorder(stream, { mimeType });
+        translationRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            translationChunks.push(e.data);
+          }
+        };
+        
+        translationRecorder.start();
+        document.getElementById('startTranslationBtn').disabled = true;
+        document.getElementById('stopTranslationBtn').disabled = false;
+        showLoading('Recording for translation... Click stop when done.', 'translationResult');
+        log('Translation recording started');
+      } catch (error) {
+        showError('Microphone access denied: ' + error.message, 'translationResult');
+        log('Translation recording error: ' + error.message);
+      }
+    }
+
+    // Stop translation recording and process
+    async function stopTranslation() {
+      if (translationRecorder && translationRecorder.state === 'recording') {
+        translationRecorder.stop();
+        document.getElementById('startTranslationBtn').disabled = false;
+        document.getElementById('stopTranslationBtn').disabled = true;
+        
+        translationRecorder.onstop = async () => {
+          const blob = new Blob(translationChunks, { type: 'audio/webm' });
+          await processTranslationAudio(blob);
+        };
+      }
+    }
+
+    // Process recorded audio for translation
+    async function processTranslationAudio(blob) {
+      showLoading('Transcribing and translating...', 'translationResult');
+      log('Processing translation audio...');
+
+      // First, transcribe the audio
+      const formData = new FormData();
+      formData.append('audio', blob);
+      formData.append('languageCode', 'ha-NG');
+      formData.append('sampleRateHertz', '16000');
+
+      try {
+        const transcriptionResponse = await fetch('/api/stt/transcribe', {
+          method: 'POST',
+          headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {},
+          body: formData
+        });
+
+        const transcriptionData = await transcriptionResponse.json();
+
+        if (transcriptionResponse.ok && transcriptionData.transcript) {
+          const hausaText = transcriptionData.transcript;
+          const targetLanguage = document.getElementById('translationLanguage').value;
+          const voiceName = document.getElementById('translationVoice').value;
+
+          // Now translate and convert to speech
+          await translateAndSpeakText(hausaText, targetLanguage, voiceName);
+        } else {
+          showError('Transcription failed: ' + (transcriptionData.message || 'Unknown error'), 'translationResult');
+        }
+      } catch (error) {
+        showError('Translation processing error: ' + error.message, 'translationResult');
+        log('Translation processing error: ' + error.message);
+      }
+    }
+
+    // Translate text and convert to speech
+    async function translateAndSpeakText(text, targetLanguage, voiceName) {
+      try {
+        log(`Starting translation request: text="${text}", targetLanguage="${targetLanguage}", voiceName="${voiceName}"`);
+        
+        const requestBody = { 
+          text, 
+          targetLanguage, 
+          voiceName: voiceName || undefined 
+        };
+        
+        log(`Request body: ${JSON.stringify(requestBody)}`);
+        
+        // Create an AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          log('Request timed out after 30 seconds');
+        }, 30000); // 30 second timeout
+
+        const response = await fetch('/api/translation/translate-and-speak', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        log(`Response status: ${response.status} ${response.statusText}`);
+        log(`Response headers: ${JSON.stringify([...response.headers.entries()])}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          log(`Response error: ${errorText}`);
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+        log(`Response data: ${JSON.stringify(data)}`);
+
+        if (data.success) {
+          // Display translation results
+          document.getElementById('translationResult').innerHTML = `
+            <div class="ai-result">
+              <h4>🇳🇬 Hausa (Original):</h4>
+              <div class="ai-result-text">${data.originalText}</div>
+            </div>
+            <div class="ai-result">
+              <h4>${getLanguageFlag(data.targetLanguage)} ${data.languageName} (Translated):</h4>
+              <div class="ai-result-text">${data.translatedText}</div>
+            </div>
+            <div class="success">Translation completed successfully! Voice: ${data.voiceUsed}</div>
+          `;
+
+          // Create audio blob from base64 data
+          if (data.audioData) {
+            try {
+              // Convert base64 to blob
+              const audioBlob = new Blob([Uint8Array.from(atob(data.audioData), c => c.charCodeAt(0))], { type: 'audio/mp3' });
+              const audioUrl = URL.createObjectURL(audioBlob);
+              
+              // Set up audio player
+              const audioElement = document.getElementById('translationAudio');
+              audioElement.src = audioUrl;
+              audioElement.load();
+              
+              // Store for download
+              currentTranslationAudio = {
+                ...data,
+                audioBlob: audioBlob,
+                audioUrl: audioUrl
+              };
+              
+              log(`Audio created successfully: ${audioBlob.size} bytes`);
+            } catch (error) {
+              log(`Error creating audio: ${error.message}`);
+            }
+          }
+
+          // Show audio player
+          document.getElementById('translationAudioPlayer').style.display = 'block';
+          
+          log(`Translation successful: ${data.originalText} → ${data.translatedText}`);
+        } else {
+          showError(data.error || 'Translation failed', 'translationResult');
+          log('Translation error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        log(`Translation error details: ${error.name} - ${error.message}`);
+        log(`Error stack: ${error.stack}`);
+        
+        if (error.name === 'AbortError') {
+          showError('Translation request timed out after 30 seconds. Please try again.', 'translationResult');
+        } else {
+          showError('Network error: ' + error.message, 'translationResult');
+        }
+        log('Translation network error: ' + error.message);
+      }
+    }
+
+    // Translate text input
+    async function translateTextInput() {
+      log('translateTextInput called');
+      
+      const text = document.getElementById('translationTextInput').value.trim();
+      const targetLanguage = document.getElementById('translationLanguage').value;
+      const voiceName = document.getElementById('translationVoice').value;
+
+      log(`Input values: text="${text}", targetLanguage="${targetLanguage}", voiceName="${voiceName}"`);
+
+      if (!text) {
+        showError('Please enter some Hausa text', 'translationResult');
+        log('No text provided for translation');
+        return;
+      }
+
+      showLoading('Translating text...', 'translationResult');
+      log('Calling translateAndSpeakText...');
+      
+      try {
+        await translateAndSpeakText(text, targetLanguage, voiceName);
+        log('translateAndSpeakText completed');
+      } catch (error) {
+        log(`Error in translateTextInput: ${error.message}`);
+        showError('Translation failed: ' + error.message, 'translationResult');
+      }
+    }
+
+    // Audio control functions
+    function playTranslationAudio() {
+      const audioElement = document.getElementById('translationAudio');
+      if (audioElement && audioElement.src) {
+        audioElement.play().then(() => {
+          log('Audio playback started');
+        }).catch(error => {
+          log('Audio playback failed: ' + error.message);
+          showError('Audio playback failed: ' + error.message, 'translationResult');
+        });
+      } else {
+        log('No audio available to play');
+        showError('No audio available to play', 'translationResult');
+      }
+    }
+
+    function pauseTranslationAudio() {
+      const audioElement = document.getElementById('translationAudio');
+      if (audioElement) {
+        audioElement.pause();
+        log('Audio playback paused');
+      }
+    }
+
+    function downloadTranslationAudio() {
+      if (currentTranslationAudio && currentTranslationAudio.audioBlob) {
+        try {
+          const url = URL.createObjectURL(currentTranslationAudio.audioBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `translation_${Date.now()}.mp3`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          log('Audio download started');
+        } catch (error) {
+          log('Audio download failed: ' + error.message);
+          showError('Audio download failed: ' + error.message, 'translationResult');
+        }
+      } else {
+        log('No audio available to download');
+        showError('No audio available to download', 'translationResult');
+      }
+    }
+
+    // Get language flag emoji
+    function getLanguageFlag(languageCode) {
+      const flags = {
+        'en': '🇺🇸',
+        'fr': '🇫🇷',
+        'ar': '🇸🇦'
+      };
+      return flags[languageCode] || '🌍';
+    }
+
     // Initialize the app
     document.addEventListener('DOMContentLoaded', () => {
       try {
         setupFileUpload();
+        loadAuthState(); // Load saved authentication state
         log('App initialized');
         
         // Test if JavaScript is working
@@ -968,8 +2110,24 @@
         document.getElementById('stopBtn').addEventListener('click', stopRecording);
         document.getElementById('connectBtn').addEventListener('click', connectWebSocket);
         document.getElementById('disconnectBtn').addEventListener('click', disconnectWebSocket);
+        document.getElementById('startMicBtn').addEventListener('click', startMicStream);
+        document.getElementById('stopMicBtn').addEventListener('click', stopMicStream);
+        document.getElementById('endSessionBtn').addEventListener('click', endSession);
         document.getElementById('watchAdBtn').addEventListener('click', watchAd);
         document.getElementById('showPlansBtn').addEventListener('click', showSubscriptionTiers);
+        
+        // Translation event listeners
+        document.getElementById('startTranslationBtn').addEventListener('click', startTranslation);
+        document.getElementById('stopTranslationBtn').addEventListener('click', stopTranslation);
+        document.getElementById('translateTextBtn').addEventListener('click', translateTextInput);
+        
+        // Load voices when language changes
+        document.getElementById('translationLanguage').addEventListener('change', (e) => {
+          loadVoicesForLanguage(e.target.value);
+        });
+        
+        // Load initial voices for English
+        loadVoicesForLanguage('en');
         
         // Test form elements exist
         const loginForm = document.getElementById('loginForm');
