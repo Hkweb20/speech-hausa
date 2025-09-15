@@ -21,6 +21,7 @@ const envSchema = zod_1.z.object({
     STORAGE_PROVIDER: zod_1.z.enum(['memory', 'sqlite', 'firebase', 'mongodb']).default('mongodb'),
     GCS_BUCKET: zod_1.z.string().optional(),
     JWT_SECRET: zod_1.z.string().default('your-secret-key-change-in-production'),
+    GEMINI_API_KEY: zod_1.z.string().optional(),
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {

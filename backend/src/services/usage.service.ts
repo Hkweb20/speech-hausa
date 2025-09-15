@@ -10,6 +10,23 @@ export interface UsageCheckResult {
   reason?: string;
 }
 
+export interface FileUploadCheckResult {
+  allowed: boolean;
+  remainingUploads: number;
+  maxFileDuration: number;
+  tier: string;
+  resetTime?: Date;
+  reason?: string;
+}
+
+export interface LiveRecordingCheckResult {
+  allowed: boolean;
+  remainingMinutes: number;
+  tier: string;
+  resetTime?: Date;
+  reason?: string;
+}
+
 export interface AIUsageCheckResult {
   allowed: boolean;
   remainingRequests: number;
@@ -115,6 +132,392 @@ export class UsageService {
         tier: 'free',
         reason: 'Error checking usage limits'
       };
+    }
+  }
+
+  /**
+   * Check if user can upload a file based on their subscription tier
+   */
+  async checkFileUploadUsage(
+    userId: string, 
+    fileDurationMinutes: number
+  ): Promise<FileUploadCheckResult> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        logger.warn({ userId }, 'User not found for file upload check');
+        return {
+          allowed: false,
+          remainingUploads: 0,
+          maxFileDuration: 0,
+          tier: 'free',
+          reason: 'User not found'
+        };
+      }
+
+      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const userLastReset = new Date(user.usageStats.lastResetDate);
+      
+      logger.info({ 
+        userId, 
+        subscriptionTier: user.subscriptionTier,
+        dailyFileUploads: user.usageStats.dailyFileUploads,
+        tierLimits: {
+          dailyFileUploads: tier.features.dailyFileUploads,
+          maxFileDuration: tier.features.maxFileDuration
+        },
+        fileDurationMinutes,
+        userLastReset: userLastReset.toISOString(),
+        today: today.toISOString()
+      }, 'Checking file upload usage');
+      
+      // Reset daily usage if it's a new day
+      if (userLastReset < today) {
+        logger.info({ userId, userLastReset: userLastReset.toISOString(), today: today.toISOString() }, 'Resetting daily file uploads for new day');
+        user.usageStats.dailyFileUploads = 0;
+        user.usageStats.lastResetDate = today;
+        await user.save();
+      }
+
+      // Check file duration limit
+      if (tier.features.maxFileDuration > 0 && fileDurationMinutes > tier.features.maxFileDuration) {
+        logger.warn({ 
+          userId, 
+          fileDurationMinutes, 
+          maxFileDuration: tier.features.maxFileDuration,
+          subscriptionTier: user.subscriptionTier 
+        }, 'File duration limit exceeded');
+        
+        return {
+          allowed: false,
+          remainingUploads: tier.features.dailyFileUploads - user.usageStats.dailyFileUploads,
+          maxFileDuration: tier.features.maxFileDuration,
+          tier: user.subscriptionTier,
+          reason: `File too long. Maximum ${tier.features.maxFileDuration} minutes per file for ${user.subscriptionTier} tier.`
+        };
+      }
+
+      // Check daily upload limit
+      if (tier.features.dailyFileUploads > 0) {
+        const remainingUploads = tier.features.dailyFileUploads - user.usageStats.dailyFileUploads;
+        
+        logger.info({ 
+          userId, 
+          dailyFileUploads: user.usageStats.dailyFileUploads,
+          maxDailyFileUploads: tier.features.dailyFileUploads,
+          remainingUploads,
+          subscriptionTier: user.subscriptionTier
+        }, 'Checking daily upload limit');
+        
+        if (remainingUploads <= 0) {
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(0, 0, 0, 0);
+          
+          logger.warn({ 
+            userId, 
+            dailyFileUploads: user.usageStats.dailyFileUploads,
+            maxDailyFileUploads: tier.features.dailyFileUploads,
+            subscriptionTier: user.subscriptionTier 
+          }, 'Daily upload limit exceeded');
+          
+          return {
+            allowed: false,
+            remainingUploads: 0,
+            maxFileDuration: tier.features.maxFileDuration,
+            tier: user.subscriptionTier,
+            resetTime: tomorrow,
+            reason: `Daily upload limit exceeded. ${tier.features.dailyFileUploads} uploads per day allowed.`
+          };
+        }
+
+        logger.info({ 
+          userId, 
+          remainingUploads: remainingUploads - 1,
+          subscriptionTier: user.subscriptionTier 
+        }, 'File upload allowed');
+
+        return {
+          allowed: true,
+          remainingUploads: remainingUploads - 1, // -1 for this upload
+          maxFileDuration: tier.features.maxFileDuration,
+          tier: user.subscriptionTier
+        };
+      }
+
+      // Unlimited uploads
+      logger.info({ userId, subscriptionTier: user.subscriptionTier }, 'Unlimited file uploads allowed');
+      return {
+        allowed: true,
+        remainingUploads: -1, // unlimited
+        maxFileDuration: tier.features.maxFileDuration,
+        tier: user.subscriptionTier
+      };
+
+    } catch (error) {
+      logger.error({ error, userId }, 'Error checking file upload limits');
+      return {
+        allowed: false,
+        remainingUploads: 0,
+        maxFileDuration: 0,
+        tier: 'free',
+        reason: 'Error checking file upload limits'
+      };
+    }
+  }
+
+  /**
+   * Check if user can perform live recording based on their subscription tier
+   */
+  async checkLiveRecordingUsage(
+    userId: string, 
+    requestedMinutes: number
+  ): Promise<LiveRecordingCheckResult> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        logger.warn({ userId }, 'User not found for live recording check');
+        return {
+          allowed: false,
+          remainingMinutes: 0,
+          tier: 'free',
+          reason: 'User not found'
+        };
+      }
+
+      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const userLastReset = new Date(user.usageStats.lastResetDate);
+      
+      logger.info({ 
+        userId, 
+        subscriptionTier: user.subscriptionTier,
+        dailyLiveRecordingMinutes: user.usageStats.dailyLiveRecordingMinutes,
+        tierLimits: {
+          dailyLiveRecordingMinutes: tier.features.dailyLiveRecordingMinutes
+        },
+        requestedMinutes,
+        userLastReset: userLastReset.toISOString(),
+        today: today.toISOString()
+      }, 'Checking live recording usage');
+      
+      // Reset daily usage if it's a new day
+      if (userLastReset < today) {
+        logger.info({ userId, userLastReset: userLastReset.toISOString(), today: today.toISOString() }, 'Resetting daily live recording minutes for new day');
+        user.usageStats.dailyLiveRecordingMinutes = 0;
+        user.usageStats.lastResetDate = today;
+        await user.save();
+      }
+
+      // Check daily live recording limit
+      if (tier.features.dailyLiveRecordingMinutes > 0) {
+        const remainingMinutes = tier.features.dailyLiveRecordingMinutes - user.usageStats.dailyLiveRecordingMinutes;
+        
+        logger.info({ 
+          userId, 
+          dailyLiveRecordingMinutes: user.usageStats.dailyLiveRecordingMinutes,
+          maxDailyLiveRecordingMinutes: tier.features.dailyLiveRecordingMinutes,
+          remainingMinutes,
+          subscriptionTier: user.subscriptionTier
+        }, 'Checking daily live recording limit');
+        
+        if (remainingMinutes < requestedMinutes) {
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(0, 0, 0, 0);
+          
+          logger.warn({ 
+            userId, 
+            dailyLiveRecordingMinutes: user.usageStats.dailyLiveRecordingMinutes,
+            maxDailyLiveRecordingMinutes: tier.features.dailyLiveRecordingMinutes,
+            subscriptionTier: user.subscriptionTier 
+          }, 'Daily live recording limit exceeded');
+          
+          return {
+            allowed: false,
+            remainingMinutes: Math.max(0, remainingMinutes),
+            tier: user.subscriptionTier,
+            resetTime: tomorrow,
+            reason: `Daily live recording limit exceeded. ${tier.features.dailyLiveRecordingMinutes} minutes per day allowed.`
+          };
+        }
+
+        logger.info({ 
+          userId, 
+          remainingMinutes: remainingMinutes - requestedMinutes,
+          subscriptionTier: user.subscriptionTier 
+        }, 'Live recording allowed');
+
+        return {
+          allowed: true,
+          remainingMinutes: remainingMinutes - requestedMinutes,
+          tier: user.subscriptionTier
+        };
+      }
+
+      // Unlimited live recording
+      logger.info({ userId, subscriptionTier: user.subscriptionTier }, 'Unlimited live recording allowed');
+      return {
+        allowed: true,
+        remainingMinutes: -1, // unlimited
+        tier: user.subscriptionTier
+      };
+
+    } catch (error) {
+      logger.error({ error, userId }, 'Error checking live recording limits');
+      return {
+        allowed: false,
+        remainingMinutes: 0,
+        tier: 'free',
+        reason: 'Error checking live recording limits'
+      };
+    }
+  }
+
+  /**
+   * Record live recording usage
+   */
+  async recordLiveRecordingUsage(
+    userId: string, 
+    minutes: number
+  ): Promise<void> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        logger.warn({ userId }, 'User not found for live recording usage recording');
+        return;
+      }
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const userLastReset = new Date(user.usageStats.lastResetDate);
+      
+      logger.info({ 
+        userId, 
+        subscriptionTier: user.subscriptionTier,
+        beforeReset: {
+          dailyLiveRecordingMinutes: user.usageStats.dailyLiveRecordingMinutes,
+          lastResetDate: userLastReset.toISOString()
+        },
+        today: today.toISOString(),
+        minutes
+      }, 'Recording live recording usage');
+      
+      // Reset daily usage if it's a new day
+      if (userLastReset < today) {
+        logger.info({ userId, userLastReset: userLastReset.toISOString(), today: today.toISOString() }, 'Resetting daily live recording minutes for new day');
+        user.usageStats.dailyLiveRecordingMinutes = 0;
+        user.usageStats.lastResetDate = today;
+      }
+
+      // Update live recording stats
+      const oldDailyMinutes = user.usageStats.dailyLiveRecordingMinutes;
+      user.usageStats.dailyLiveRecordingMinutes += minutes;
+      user.usageStats.monthlyLiveRecordingMinutes += minutes;
+      user.usageStats.totalLiveRecordingMinutes += minutes;
+      
+      // Also update general transcription stats
+      user.usageStats.dailyMinutes += minutes;
+      user.usageStats.monthlyMinutes += minutes;
+      user.usageStats.totalMinutes += minutes;
+      user.usageStats.transcriptsCount += 1;
+
+      await user.save();
+      
+      logger.info({ 
+        userId, 
+        subscriptionTier: user.subscriptionTier,
+        minutes,
+        liveRecording: {
+          before: oldDailyMinutes,
+          after: user.usageStats.dailyLiveRecordingMinutes,
+          monthly: user.usageStats.monthlyLiveRecordingMinutes,
+          total: user.usageStats.totalLiveRecordingMinutes
+        },
+        general: {
+          daily: user.usageStats.dailyMinutes,
+          monthly: user.usageStats.monthlyMinutes,
+          total: user.usageStats.totalMinutes
+        }
+      }, 'Live recording usage recorded successfully');
+
+    } catch (error) {
+      logger.error({ error, userId, minutes }, 'Error recording live recording usage');
+    }
+  }
+
+  /**
+   * Record file upload usage
+   */
+  async recordFileUploadUsage(
+    userId: string, 
+    fileDurationMinutes: number
+  ): Promise<void> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        logger.warn({ userId }, 'User not found for file upload usage recording');
+        return;
+      }
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const userLastReset = new Date(user.usageStats.lastResetDate);
+      
+      logger.info({ 
+        userId, 
+        subscriptionTier: user.subscriptionTier,
+        beforeReset: {
+          dailyFileUploads: user.usageStats.dailyFileUploads,
+          lastResetDate: userLastReset.toISOString()
+        },
+        today: today.toISOString(),
+        fileDurationMinutes
+      }, 'Recording file upload usage');
+      
+      // Reset daily usage if it's a new day
+      if (userLastReset < today) {
+        logger.info({ userId, userLastReset: userLastReset.toISOString(), today: today.toISOString() }, 'Resetting daily file uploads for new day');
+        user.usageStats.dailyFileUploads = 0;
+        user.usageStats.lastResetDate = today;
+      }
+
+      // Update file upload stats
+      const oldDailyUploads = user.usageStats.dailyFileUploads;
+      user.usageStats.dailyFileUploads += 1;
+      user.usageStats.monthlyFileUploads += 1;
+      user.usageStats.totalFileUploads += 1;
+      
+      // Also update general transcription stats
+      user.usageStats.dailyMinutes += fileDurationMinutes;
+      user.usageStats.monthlyMinutes += fileDurationMinutes;
+      user.usageStats.totalMinutes += fileDurationMinutes;
+      user.usageStats.transcriptsCount += 1;
+
+      await user.save();
+      
+      logger.info({ 
+        userId, 
+        subscriptionTier: user.subscriptionTier,
+        fileDurationMinutes,
+        uploads: {
+          before: oldDailyUploads,
+          after: user.usageStats.dailyFileUploads,
+          monthly: user.usageStats.monthlyFileUploads,
+          total: user.usageStats.totalFileUploads
+        },
+        minutes: {
+          daily: user.usageStats.dailyMinutes,
+          monthly: user.usageStats.monthlyMinutes,
+          total: user.usageStats.totalMinutes
+        }
+      }, 'File upload usage recorded successfully');
+
+    } catch (error) {
+      logger.error({ error, userId, fileDurationMinutes }, 'Error recording file upload usage');
     }
   }
 
@@ -383,14 +786,19 @@ export class UsageService {
         usage: user.usageStats,
         points: user.pointsBalance,
         tier: user.subscriptionTier,
-        limits: {
-          dailyMinutes: tier.features.dailyMinutes,
-          monthlyMinutes: tier.features.monthlyMinutes,
-          maxFileSize: tier.features.maxFileSize,
-          maxTranscripts: tier.features.maxTranscripts,
-          dailyAdWatches: tier.limits.dailyAdWatches,
-          maxPointsBalance: tier.limits.maxPointsBalance
-        }
+                limits: {
+                  dailyMinutes: tier.features.dailyMinutes,
+                  monthlyMinutes: tier.features.monthlyMinutes,
+                  maxFileSize: tier.features.maxFileSize,
+                  maxTranscripts: tier.features.maxTranscripts,
+                  dailyAdWatches: tier.limits.dailyAdWatches,
+                  maxPointsBalance: tier.limits.maxPointsBalance,
+                  // File upload limits
+                  dailyFileUploads: tier.features.dailyFileUploads,
+                  maxFileDuration: tier.features.maxFileDuration,
+                  // Live recording limits
+                  dailyLiveRecordingMinutes: tier.features.dailyLiveRecordingMinutes
+                }
       };
 
     } catch (error) {

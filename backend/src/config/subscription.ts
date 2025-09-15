@@ -6,7 +6,7 @@ export interface SubscriptionTier {
   features: {
     dailyMinutes: number;
     monthlyMinutes: number;
-    maxFileSize: number; // in MB
+    maxFileSize: number; // in minutes per file
     maxTranscripts: number;
     exportFormats: string[];
     aiFeatures: string[];
@@ -16,6 +16,11 @@ export interface SubscriptionTier {
     apiAccess: boolean;
     dailyAIRequests: number;
     monthlyAIRequests: number;
+      // File upload limits
+      dailyFileUploads: number; // number of file uploads per day
+      maxFileDuration: number; // maximum duration per file in minutes
+      // Live recording limits
+      dailyLiveRecordingMinutes: number; // minutes of live recording per day
   };
   limits: {
     dailyAdWatches: number;
@@ -43,7 +48,12 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       prioritySupport: false,
       apiAccess: false,
       dailyAIRequests: 5,
-      monthlyAIRequests: 150
+      monthlyAIRequests: 150,
+      // File upload limits
+      dailyFileUploads: 2, // 2 file uploads per day
+      maxFileDuration: 3, // 3 minutes max per file
+      // Live recording limits
+      dailyLiveRecordingMinutes: 5 // 5 minutes of live recording per day
     },
     limits: {
       dailyAdWatches: 5, // 5 ads per day = 50 points
@@ -69,7 +79,12 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       prioritySupport: false,
       apiAccess: false,
       dailyAIRequests: 20,
-      monthlyAIRequests: 600
+      monthlyAIRequests: 600,
+      // File upload limits
+      dailyFileUploads: 5, // 5 file uploads per day
+      maxFileDuration: 10, // 10 minutes max per file
+      // Live recording limits
+      dailyLiveRecordingMinutes: 10 // 10 minutes of live recording per day
     },
     limits: {
       dailyAdWatches: 0, // no ads
@@ -102,7 +117,12 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       prioritySupport: true,
       apiAccess: false,
       dailyAIRequests: 100,
-      monthlyAIRequests: 3000
+      monthlyAIRequests: 3000,
+      // File upload limits
+      dailyFileUploads: 20, // 20 file uploads per day
+      maxFileDuration: 60, // 60 minutes max per file
+      // Live recording limits
+      dailyLiveRecordingMinutes: 60 // 60 minutes of live recording per day
     },
     limits: {
       dailyAdWatches: 0, // no ads
@@ -112,8 +132,8 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
     description: 'Everything you need for professional transcription work'
   },
   premium: {
-    name: 'Premium (Enterprise)',
-    price: 0, // custom pricing
+    name: 'Premium',
+    price: 999, // $9.99
     currency: 'USD',
     billingCycle: 'monthly',
     features: {
@@ -138,14 +158,19 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       prioritySupport: true,
       apiAccess: true,
       dailyAIRequests: -1, // unlimited
-      monthlyAIRequests: -1 // unlimited
+      monthlyAIRequests: -1, // unlimited
+      // File upload limits - Premium gets 10 uploads/day, 5 min max per file
+      dailyFileUploads: 10, // 10 file uploads per day
+      maxFileDuration: 5, // 5 minutes max per file
+      // Live recording limits - Premium gets 30 minutes per day
+      dailyLiveRecordingMinutes: 30 // 30 minutes of live recording per day
     },
     limits: {
       dailyAdWatches: 0, // no ads
       pointsPerAd: 0,
       maxPointsBalance: 0
     },
-    description: 'Enterprise features with dedicated support and API access'
+    description: 'Premium features with 10 daily uploads and 5-minute file limit'
   }
 };
 

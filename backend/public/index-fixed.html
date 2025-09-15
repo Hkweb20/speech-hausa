@@ -198,6 +198,84 @@
       margin-top: 5px;
     }
 
+    /* Progress bars for limits */
+    .limit-progress {
+      margin-top: 10px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      transition: width 0.3s ease;
+    }
+
+    .progress-fill.warning {
+      background: linear-gradient(90deg, #ffa500, #ff8c00);
+    }
+
+    .progress-fill.danger {
+      background: linear-gradient(90deg, #ff6b6b, #ee5a52);
+    }
+
+    .limit-text {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 3px;
+    }
+
+    .limit-text.warning {
+      color: #ff8c00;
+    }
+
+    .limit-text.danger {
+      color: #ee5a52;
+    }
+
+    /* File upload limits display */
+    .upload-limits {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+
+    .upload-limits h4 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+
+    .limit-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .limit-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .limit-label {
+      color: #666;
+    }
+
+    .limit-value {
+      font-weight: 600;
+      color: #333;
+    }
+
     .main-content {
       display: none;
     }
@@ -608,6 +686,48 @@
       <div class="user-stats" id="userStats">
         <!-- Stats will be populated by JavaScript -->
       </div>
+      
+          <!-- File Upload Limits -->
+          <div class="upload-limits" id="uploadLimits" style="display: none;">
+            <h4>📁 File Upload Limits</h4>
+            <div class="limit-item">
+              <span class="limit-label">Daily Uploads:</span>
+              <span class="limit-value" id="dailyUploads">0/2</span>
+            </div>
+            <div class="limit-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" id="uploadProgress" style="width: 0%"></div>
+              </div>
+              <div class="limit-text" id="uploadLimitText">2 uploads remaining today</div>
+            </div>
+            <div class="limit-item">
+              <span class="limit-label">Max File Duration:</span>
+              <span class="limit-value" id="maxFileDuration">3 minutes</span>
+            </div>
+            <div class="limit-item">
+              <span class="limit-label">Subscription:</span>
+              <span class="limit-value" id="subscriptionTier">Free</span>
+            </div>
+          </div>
+          
+          <!-- Live Recording Limits -->
+          <div class="upload-limits" id="liveRecordingLimits" style="display: none;">
+            <h4>🎙️ Live Recording Limits</h4>
+            <div class="limit-item">
+              <span class="limit-label">Daily Minutes:</span>
+              <span class="limit-value" id="dailyLiveRecordingMinutes">0/5</span>
+            </div>
+            <div class="limit-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" id="liveRecordingProgress" style="width: 0%"></div>
+              </div>
+              <div class="limit-text" id="liveRecordingLimitText">5 minutes remaining today</div>
+            </div>
+            <div class="limit-item">
+              <span class="limit-label">Subscription:</span>
+              <span class="limit-value" id="liveRecordingSubscriptionTier">Free</span>
+            </div>
+          </div>
     </div>
 
     <!-- Main Content -->
@@ -617,6 +737,13 @@
         <div class="feature-card">
           <h3>📁 Upload Audio File</h3>
           <p>Upload an audio file and get it transcribed instantly. Supports MP3, WAV, WebM, and more formats.</p>
+          
+          <!-- Upload Limits Warning -->
+          <div id="uploadLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
+            <strong>📋 Upload Limits:</strong>
+            <div id="uploadLimitsText">Loading limits...</div>
+          </div>
+          
           <div class="upload-area" id="uploadArea">
             <p>Drag & drop your audio file here or click to browse</p>
             <input type="file" id="fileInput" class="file-input" accept="audio/*">
@@ -640,6 +767,13 @@
         <div class="feature-card">
           <h3>🎙️ Live Recording</h3>
           <p>Record directly from your microphone and get real-time transcription with live streaming.</p>
+          
+          <!-- Live Recording Limits Warning -->
+          <div id="liveRecordingLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
+            <strong>🎙️ Live Recording Limits:</strong>
+            <div id="liveRecordingLimitsText">Loading limits...</div>
+          </div>
+          
           <div style="text-align: center; margin-bottom: 20px;">
             <button class="btn btn-primary" id="recordBtn">Start Recording</button>
             <button class="btn btn-secondary" id="stopBtn" disabled>Stop Recording</button>
@@ -952,6 +1086,26 @@
       element.innerHTML = `<div class="loading">${message}</div>`;
     }
 
+    function formatMinutes(minutes) {
+      if (minutes === 0) return '0';
+      if (minutes < 1) {
+        // For values less than 1 minute, show seconds
+        const seconds = Math.round(minutes * 60);
+        return `${seconds}s`;
+      }
+      if (minutes < 60) {
+        // For values less than 1 hour, show minutes with 1 decimal place
+        return `${minutes.toFixed(1)}m`;
+      }
+      // For values 1 hour or more, show hours and minutes
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = Math.round(minutes % 60);
+      if (remainingMinutes === 0) {
+        return `${hours}h`;
+      }
+      return `${hours}h ${remainingMinutes}m`;
+    }
+
     // Authentication functions
     function showAuthForm(formType) {
       console.log('Switching to form:', formType);
@@ -1088,18 +1242,19 @@
           const usage = data.stats.usage;
           const points = data.stats.points;
           const tier = data.stats.tier;
+          const limits = data.stats.limits;
           
           document.getElementById('userStats').innerHTML = `
             <div class="stat-item">
-              <div class="stat-value">${usage.dailyMinutes}</div>
+              <div class="stat-value">${formatMinutes(usage.dailyMinutes)}</div>
               <div class="stat-label">Daily Minutes</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">${usage.monthlyMinutes}</div>
+              <div class="stat-value">${formatMinutes(usage.monthlyMinutes)}</div>
               <div class="stat-label">Monthly Minutes</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">${usage.totalMinutes}</div>
+              <div class="stat-value">${formatMinutes(usage.totalMinutes)}</div>
               <div class="stat-label">Total Minutes</div>
             </div>
             <div class="stat-item">
@@ -1116,11 +1271,150 @@
             </div>
           `;
           
+          // Update file upload limits
+          updateFileUploadLimits(usage, limits, tier);
+          
+          // Update live recording limits
+          updateLiveRecordingLimits(usage, limits, tier);
+          
           log('User stats loaded: ' + JSON.stringify(data.stats));
         }
       } catch (error) {
         log('Error loading user stats: ' + error.message);
       }
+    }
+
+    function updateFileUploadLimits(usage, limits, tier) {
+      const dailyUploads = usage.dailyFileUploads || 0;
+      const maxDailyUploads = limits.dailyFileUploads || 2;
+      const maxFileDuration = limits.maxFileDuration || 3;
+      
+      // Show upload limits section
+      document.getElementById('uploadLimits').style.display = 'block';
+      
+      // Update daily uploads display
+      document.getElementById('dailyUploads').textContent = `${dailyUploads}/${maxDailyUploads}`;
+      document.getElementById('maxFileDuration').textContent = `${maxFileDuration} minutes`;
+      document.getElementById('subscriptionTier').textContent = tier.toUpperCase();
+      
+      // Calculate progress percentage
+      const progressPercentage = maxDailyUploads > 0 ? (dailyUploads / maxDailyUploads) * 100 : 0;
+      const progressBar = document.getElementById('uploadProgress');
+      const limitText = document.getElementById('uploadLimitText');
+      
+      // Update progress bar
+      progressBar.style.width = `${Math.min(progressPercentage, 100)}%`;
+      
+      // Update progress bar color based on usage
+      progressBar.className = 'progress-fill';
+      if (progressPercentage >= 80) {
+        progressBar.classList.add('danger');
+      } else if (progressPercentage >= 60) {
+        progressBar.classList.add('warning');
+      }
+      
+      // Update limit text
+      const remaining = maxDailyUploads - dailyUploads;
+      if (remaining <= 0) {
+        limitText.textContent = 'No uploads remaining today';
+        limitText.className = 'limit-text danger';
+      } else if (remaining === 1) {
+        limitText.textContent = '1 upload remaining today';
+        limitText.className = 'limit-text warning';
+      } else {
+        limitText.textContent = `${remaining} uploads remaining today`;
+        limitText.className = 'limit-text';
+      }
+      
+      // Update upload limits warning in file upload section
+      updateUploadLimitsWarning(dailyUploads, maxDailyUploads, maxFileDuration, tier);
+    }
+
+    function updateLiveRecordingLimits(usage, limits, tier) {
+      const dailyLiveRecordingMinutes = usage.dailyLiveRecordingMinutes || 0;
+      const maxDailyLiveRecordingMinutes = limits.dailyLiveRecordingMinutes || 5;
+      
+      // Show live recording limits section
+      document.getElementById('liveRecordingLimits').style.display = 'block';
+      
+      // Update daily live recording minutes display
+      document.getElementById('dailyLiveRecordingMinutes').textContent = `${dailyLiveRecordingMinutes}/${maxDailyLiveRecordingMinutes}`;
+      document.getElementById('liveRecordingSubscriptionTier').textContent = tier.toUpperCase();
+      
+      // Calculate progress percentage
+      const progressPercentage = Math.min((dailyLiveRecordingMinutes / maxDailyLiveRecordingMinutes) * 100, 100);
+      const progressBar = document.getElementById('liveRecordingProgress');
+      const progressText = document.getElementById('liveRecordingLimitText');
+      
+      // Update progress bar
+      progressBar.style.width = `${progressPercentage}%`;
+      progressBar.className = 'progress-fill';
+      
+      // Add warning/danger classes based on usage
+      if (progressPercentage >= 100) {
+        progressBar.classList.add('danger');
+        progressText.textContent = 'No live recording time remaining today';
+      } else if (progressPercentage >= 80) {
+        progressBar.classList.add('warning');
+        const remaining = maxDailyLiveRecordingMinutes - dailyLiveRecordingMinutes;
+        progressText.textContent = `${remaining} minutes remaining today`;
+      } else {
+        const remaining = maxDailyLiveRecordingMinutes - dailyLiveRecordingMinutes;
+        progressText.textContent = `${remaining} minutes remaining today`;
+      }
+      
+      // Update live recording limits warning in live recording section
+      updateLiveRecordingLimitsWarning(dailyLiveRecordingMinutes, maxDailyLiveRecordingMinutes, tier);
+    }
+
+    function updateLiveRecordingLimitsWarning(dailyLiveRecordingMinutes, maxDailyLiveRecordingMinutes, tier) {
+      const warningElement = document.getElementById('liveRecordingLimitsWarning');
+      const textElement = document.getElementById('liveRecordingLimitsText');
+      
+      if (!warningElement || !textElement) return;
+      
+      const remaining = maxDailyLiveRecordingMinutes - dailyLiveRecordingMinutes;
+      let warningClass = 'usage-info';
+      let warningText = '';
+      
+      if (remaining <= 0) {
+        warningClass += ' error';
+        warningText = `❌ No live recording time remaining today (${dailyLiveRecordingMinutes}/${maxDailyLiveRecordingMinutes} used).`;
+      } else if (remaining === 1) {
+        warningClass += ' warning';
+        warningText = `⚠️ 1 minute remaining today (${dailyLiveRecordingMinutes}/${maxDailyLiveRecordingMinutes} used).`;
+      } else {
+        warningText = `✅ ${remaining} minutes remaining today (${dailyLiveRecordingMinutes}/${maxDailyLiveRecordingMinutes} used).`;
+      }
+      
+      warningElement.className = warningClass;
+      textElement.textContent = warningText;
+      warningElement.style.display = 'block';
+    }
+
+    function updateUploadLimitsWarning(dailyUploads, maxDailyUploads, maxFileDuration, tier) {
+      const warningElement = document.getElementById('uploadLimitsWarning');
+      const textElement = document.getElementById('uploadLimitsText');
+      
+      if (!warningElement || !textElement) return;
+      
+      const remaining = maxDailyUploads - dailyUploads;
+      let warningClass = 'usage-info';
+      let warningText = '';
+      
+      if (remaining <= 0) {
+        warningClass += ' error';
+        warningText = `❌ No uploads remaining today (${dailyUploads}/${maxDailyUploads} used). Max file duration: ${maxFileDuration} minutes.`;
+      } else if (remaining === 1) {
+        warningClass += ' warning';
+        warningText = `⚠️ 1 upload remaining today (${dailyUploads}/${maxDailyUploads} used). Max file duration: ${maxFileDuration} minutes.`;
+      } else {
+        warningText = `✅ ${remaining} uploads remaining today (${dailyUploads}/${maxDailyUploads} used). Max file duration: ${maxFileDuration} minutes.`;
+      }
+      
+      warningElement.className = warningClass;
+      textElement.textContent = warningText;
+      warningElement.style.display = 'block';
     }
 
     // File upload functions
@@ -1160,8 +1454,21 @@
     }
 
     async function handleFileUpload(file) {
+      // Check file duration before uploading
+      const duration = await getAudioDuration(file);
+      const durationMinutes = duration / 60;
+      
+      // Get user's file duration limit
+      const maxDuration = getMaxFileDuration();
+      
+      if (maxDuration > 0 && durationMinutes > maxDuration) {
+        showError(`File too long! Maximum ${maxDuration} minutes allowed. Your file is ${formatMinutes(durationMinutes)}.`, 'uploadResult');
+        log(`File duration exceeded: ${formatMinutes(durationMinutes)} > ${maxDuration} min limit`);
+        return;
+      }
+      
       showLoading('Transcribing audio...', 'uploadResult');
-      log('Uploading file: ' + file.name);
+      log('Uploading file: ' + file.name + ` (${formatMinutes(durationMinutes)})`);
 
       const formData = new FormData();
       formData.append('audio', file);
@@ -1178,15 +1485,26 @@
         const data = await response.json();
 
         if (response.ok) {
+          const durationMinutes = data.duration / 60;
           document.getElementById('uploadResult').innerHTML = `
             <div class="transcript-text">${data.transcript}</div>
-            <div class="success">Transcription completed successfully!</div>
+            <div class="success">Transcription completed successfully! Duration: ${formatMinutes(durationMinutes)}</div>
           `;
           showAiButtons('uploadResult');
           log('Transcription successful');
+          
+          // Refresh user stats to update upload limits
+          if (authToken) {
+            loadUserStats();
+          }
         } else {
-          showError(data.message || 'Transcription failed', 'uploadResult');
-          log('Transcription error: ' + (data.message || 'Unknown error'));
+          if (data.code === 'FILE_UPLOAD_LIMIT_EXCEEDED') {
+            showError(`Upload limit exceeded: ${data.details.reason}`, 'uploadResult');
+            log('Upload limit exceeded: ' + data.details.reason);
+          } else {
+            showError(data.message || 'Transcription failed', 'uploadResult');
+            log('Transcription error: ' + (data.message || 'Unknown error'));
+          }
         }
       } catch (error) {
         showError('Network error: ' + error.message, 'uploadResult');
@@ -1194,9 +1512,114 @@
       }
     }
 
+    // Helper function to get audio duration
+    function getAudioDuration(file) {
+      return new Promise((resolve) => {
+        const audio = new Audio();
+        const url = URL.createObjectURL(file);
+        
+        audio.addEventListener('loadedmetadata', () => {
+          URL.revokeObjectURL(url);
+          resolve(audio.duration);
+        });
+        
+        audio.addEventListener('error', () => {
+          URL.revokeObjectURL(url);
+          // Fallback: estimate duration based on file size
+          // Assume 16kHz, 16-bit mono = 32KB per second
+          const estimatedDuration = file.size / (16000 * 2);
+          resolve(estimatedDuration);
+        });
+        
+        audio.src = url;
+      });
+    }
+
+    // Helper function to get max file duration from current user
+    function getMaxFileDuration() {
+      if (!currentUser) return 3; // Default for anonymous users
+      
+      // This would be set when user stats are loaded
+      const maxDurationElement = document.getElementById('maxFileDuration');
+      if (maxDurationElement) {
+        const text = maxDurationElement.textContent;
+        const match = text.match(/(\d+)\s*minutes?/);
+        return match ? parseInt(match[1]) : 3;
+      }
+      
+      return 3; // Default fallback
+    }
+
+    // UsageService class for frontend usage checks
+    class UsageService {
+      async checkLiveRecordingUsage(userId, requestedMinutes) {
+        try {
+          const response = await fetch('/api/usage/check-live-recording', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              userId,
+              requestedMinutes
+            })
+          });
+          
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          console.error('Error checking live recording usage:', error);
+          return {
+            allowed: false,
+            remainingMinutes: 0,
+            tier: 'free',
+            reason: 'Error checking live recording limits'
+          };
+        }
+      }
+
+      async recordLiveRecordingUsage(userId, minutes) {
+        try {
+          const response = await fetch('/api/usage/record-live-recording', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              userId,
+              minutes
+            })
+          });
+          
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          console.error('Error recording live recording usage:', error);
+          return { success: false };
+        }
+      }
+    }
+
     // Recording functions
     async function startRecording() {
       try {
+        // Check live recording limits for authenticated users
+        if (authToken && currentUser) {
+          const usageService = new UsageService();
+          const liveRecordingCheck = await usageService.checkLiveRecordingUsage(
+            currentUser.id,
+            1 // Request 1 minute minimum (will be updated with actual duration)
+          );
+
+          if (!liveRecordingCheck.allowed) {
+            showError(`Live recording limit exceeded: ${liveRecordingCheck.reason}`, 'recordResult');
+            log(`Live recording limit exceeded: ${liveRecordingCheck.reason}`);
+            return;
+          }
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         recordedChunks = [];
         
@@ -1246,6 +1669,7 @@
       formData.append('audio', blob);
       formData.append('languageCode', 'ha-NG');
       formData.append('sampleRateHertz', '16000');
+      formData.append('source', 'live-recording'); // Mark as live recording
 
       try {
         const response = await fetch('/api/stt/transcribe', {
@@ -1257,15 +1681,26 @@
         const data = await response.json();
 
         if (response.ok) {
+          const durationMinutes = data.duration / 60;
           document.getElementById('recordResult').innerHTML = `
             <div class="transcript-text">${data.transcript}</div>
-            <div class="success">Recording transcribed successfully!</div>
+            <div class="success">Recording transcribed successfully! Duration: ${formatMinutes(durationMinutes)}</div>
           `;
           showAiButtons('recordResult');
           log('Recording transcription successful');
+          
+          // Refresh user stats to update live recording limits
+          if (authToken) {
+            loadUserStats();
+          }
         } else {
-          showError(data.message || 'Transcription failed', 'recordResult');
-          log('Recording transcription error: ' + (data.message || 'Unknown error'));
+          if (data.code === 'LIVE_RECORDING_LIMIT_EXCEEDED') {
+            showError(`Live recording limit exceeded: ${data.details.reason}`, 'recordResult');
+            log(`Live recording limit exceeded: ${data.details.reason}`);
+          } else {
+            showError(data.message || 'Transcription failed', 'recordResult');
+            log('Recording transcription error: ' + (data.message || 'Unknown error'));
+          }
         }
       } catch (error) {
         showError('Network error: ' + error.message, 'recordResult');

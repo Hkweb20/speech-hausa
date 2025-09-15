@@ -40,10 +40,16 @@ class GcpSttService {
             audio: { content: buffer.toString('base64') },
             config,
         };
+        console.log('Sending request to Google Cloud Speech-to-Text...');
+        console.log('Request config:', config);
         const [response] = await this.client.recognize(request);
+        console.log('Google Cloud response:', JSON.stringify(response, null, 2));
         const alternative = response.results?.[0]?.alternatives?.[0];
         const confidence = alternative?.confidence ?? undefined;
-        return { transcript: alternative?.transcript ?? '', confidence };
+        const transcript = alternative?.transcript ?? '';
+        console.log('Extracted transcript:', transcript);
+        console.log('Confidence:', confidence);
+        return { transcript, confidence };
     }
     async transcribeLongFile(buffer, bucketName, objectName, options) {
         const bucket = this.storage.bucket(bucketName);

@@ -13,29 +13,54 @@ export async function transcribeUpload(req: AuthenticatedRequest, res: Response)
   const file = (req as any).file as Express.Multer.File | undefined;
   if (!file) return res.status(400).json({ message: 'No file uploaded' });
   
-  const { sampleRateHertz, languageCode, encoding } = req.body || {};
-  const duration = file.buffer.length / (16000 * 2); // Estimate duration
+  const { sampleRateHertz, languageCode, encoding, source } = req.body || {};
+  const duration = file.buffer.length / (16000 * 2); // Estimate duration in seconds
+  const durationMinutes = duration / 60; // Convert to minutes
   
   try {
-    // Check usage limits for authenticated users
+    // Check limits for authenticated users based on source
     if (req.user) {
       const usageService = new UsageService();
-      const usageCheck = await usageService.checkTranscriptionUsage(
-        req.user.id,
-        Math.ceil(duration / 60), // Convert to minutes
-        'file_upload'
-      );
+      
+      if (source === 'live-recording') {
+        // Check live recording limits
+        const liveRecordingCheck = await usageService.checkLiveRecordingUsage(
+          req.user.id,
+          durationMinutes
+        );
 
-      if (!usageCheck.allowed) {
-        return res.status(403).json({
-          error: 'Usage limit exceeded',
-          code: 'USAGE_LIMIT_EXCEEDED',
-          details: {
-            reason: usageCheck.reason,
-            remainingMinutes: usageCheck.remainingMinutes,
-            tier: usageCheck.tier
-          }
-        });
+        if (!liveRecordingCheck.allowed) {
+          return res.status(403).json({
+            error: 'Live recording limit exceeded',
+            code: 'LIVE_RECORDING_LIMIT_EXCEEDED',
+            details: {
+              reason: liveRecordingCheck.reason,
+              remainingMinutes: liveRecordingCheck.remainingMinutes,
+              tier: liveRecordingCheck.tier,
+              resetTime: liveRecordingCheck.resetTime
+            }
+          });
+        }
+      } else {
+        // Check file upload limits (default behavior)
+        const fileUploadCheck = await usageService.checkFileUploadUsage(
+          req.user.id,
+          durationMinutes
+        );
+
+        if (!fileUploadCheck.allowed) {
+          return res.status(403).json({
+            error: 'File upload limit exceeded',
+            code: 'FILE_UPLOAD_LIMIT_EXCEEDED',
+            details: {
+              reason: fileUploadCheck.reason,
+              remainingUploads: fileUploadCheck.remainingUploads,
+              maxFileDuration: fileUploadCheck.maxFileDuration,
+              tier: fileUploadCheck.tier,
+              resetTime: fileUploadCheck.resetTime
+            }
+          });
+        }
       }
     }
 
@@ -87,14 +112,23 @@ export async function transcribeUpload(req: AuthenticatedRequest, res: Response)
     
     transcriptsRepo.create(t);
     
-    // Record usage for authenticated users
+    // Record usage for authenticated users based on source
     if (req.user) {
       const usageService = new UsageService();
-      await usageService.recordUsage(
-        req.user.id,
-        Math.ceil(actualDuration / 60),
-        'file_upload'
-      );
+      
+      if (source === 'live-recording') {
+        // Record live recording usage
+        await usageService.recordLiveRecordingUsage(
+          req.user.id,
+          actualDuration / 60 // Convert to minutes
+        );
+      } else {
+        // Record file upload usage (default behavior)
+        await usageService.recordFileUploadUsage(
+          req.user.id,
+          actualDuration / 60 // Convert to minutes
+        );
+      }
     }
     
     return res.json({ 

@@ -18,6 +18,14 @@ export interface IUser extends Document {
     dailyAIRequests: number;
     monthlyAIRequests: number;
     totalAIRequests: number;
+            // File upload tracking
+            dailyFileUploads: number;
+            monthlyFileUploads: number;
+            totalFileUploads: number;
+            // Live recording tracking
+            dailyLiveRecordingMinutes: number;
+            monthlyLiveRecordingMinutes: number;
+            totalLiveRecordingMinutes: number;
   };
   pointsBalance: number;
   pointsHistory: Array<{
@@ -67,7 +75,15 @@ const UserSchema = new Schema<IUser>({
     lastResetDate: { type: Date, default: Date.now },
     dailyAIRequests: { type: Number, default: 0 },
     monthlyAIRequests: { type: Number, default: 0 },
-    totalAIRequests: { type: Number, default: 0 }
+    totalAIRequests: { type: Number, default: 0 },
+            // File upload tracking
+            dailyFileUploads: { type: Number, default: 0 },
+            monthlyFileUploads: { type: Number, default: 0 },
+            totalFileUploads: { type: Number, default: 0 },
+            // Live recording tracking
+            dailyLiveRecordingMinutes: { type: Number, default: 0 },
+            monthlyLiveRecordingMinutes: { type: Number, default: 0 },
+            totalLiveRecordingMinutes: { type: Number, default: 0 }
   },
   pointsBalance: { type: Number, default: 0 },
   pointsHistory: [{

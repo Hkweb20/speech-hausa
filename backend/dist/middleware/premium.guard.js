@@ -10,11 +10,16 @@ const logger_1 = require("../config/logger");
 const checkTranscriptionUsage = (source) => {
     return async (req, res, next) => {
         try {
+            // Allow anonymous users with basic limits
             if (!req.user) {
-                return res.status(401).json({
-                    error: 'Authentication required',
-                    code: 'UNAUTHENTICATED'
-                });
+                // For anonymous users, allow basic usage (e.g., 5 minutes per session)
+                // This is a simple implementation - in production you might want IP-based tracking
+                req.body._usageInfo = {
+                    userId: 'anonymous',
+                    minutes: 1, // Default 1 minute for anonymous
+                    source
+                };
+                return next();
             }
             const usageService = new usage_service_1.UsageService();
             const requestedMinutes = req.body.duration || 1; // default 1 minute if not specified
@@ -135,11 +140,22 @@ exports.requirePoints = requirePoints;
 const checkFileSizeLimit = () => {
     return (req, res, next) => {
         try {
+            // Allow anonymous users with basic file size limits
             if (!req.user) {
-                return res.status(401).json({
-                    error: 'Authentication required',
-                    code: 'UNAUTHENTICATED'
-                });
+                const file = req.file;
+                const maxSizeMB = 10; // Basic limit for anonymous users (10MB)
+                if (file && file.size > maxSizeMB * 1024 * 1024) {
+                    return res.status(413).json({
+                        error: 'File too large',
+                        code: 'FILE_TOO_LARGE',
+                        details: {
+                            fileSize: file.size / (1024 * 1024),
+                            maxSize: maxSizeMB,
+                            tier: 'anonymous'
+                        }
+                    });
+                }
+                return next();
             }
             const tier = subscription_1.SUBSCRIPTION_TIERS[req.user.subscriptionTier];
             const file = req.file;
