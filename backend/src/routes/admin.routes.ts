@@ -13,7 +13,10 @@ import {
   updateUser,
   resetUserDailyLimits,
   resetUserMonthlyLimits,
-  deleteUser
+  deleteUser,
+  upgradeUser,
+  bulkUpgradeUsers,
+  getUserSubscriptionInfo
 } from '../controllers/admin-users.controller';
 import {
   getSystemStats,
@@ -21,6 +24,13 @@ import {
   getUsageReport,
   getAdminLogs
 } from '../controllers/admin-analytics.controller';
+import {
+  getLanguages,
+  addLanguage,
+  updateLanguage,
+  deleteLanguage,
+  getAvailableLanguages
+} from '../controllers/admin-languages.controller';
 import { 
   authenticateAdmin, 
   requirePermission, 
@@ -70,9 +80,21 @@ router.get('/users/:id/usage',
   requirePermission('manage_users'), 
   getUserUsage
 );
+router.get('/users/:id/subscription', 
+  requirePermission('manage_users'), 
+  getUserSubscriptionInfo
+);
 router.put('/users/:id', 
   requirePermission('manage_users'), 
   updateUser
+);
+router.post('/users/:id/upgrade', 
+  requirePermission('manage_users'), 
+  upgradeUser
+);
+router.post('/users/bulk-upgrade', 
+  requirePermission('manage_users'), 
+  bulkUpgradeUsers
 );
 router.post('/users/:id/reset-daily', 
   requirePermission('manage_users'), 
@@ -103,6 +125,27 @@ router.get('/analytics/usage-report',
 router.get('/analytics/logs', 
   requirePermission('audit_logs'), 
   getAdminLogs
+);
+
+// Language management
+router.get('/languages', 
+  requirePermission('manage_system'), 
+  getLanguages
+);
+router.post('/languages', 
+  requirePermission('manage_system'), 
+  addLanguage
+);
+router.put('/languages/:id', 
+  requirePermission('manage_system'), 
+  updateLanguage
+);
+router.delete('/languages/:id', 
+  requirePermission('manage_system'), 
+  deleteLanguage
+);
+router.get('/languages/available', 
+  getAvailableLanguages
 );
 
 export default router;

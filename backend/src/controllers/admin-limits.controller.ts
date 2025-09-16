@@ -51,7 +51,10 @@ export async function updateSubscriptionTier(req: AdminRequest, res: Response) {
     const updatedTier = { ...SUBSCRIPTION_TIERS[tierName] };
     
     for (const [key, value] of Object.entries(updates)) {
-      if (allowedFields.includes(key)) {
+      if (key === 'features' && typeof value === 'object') {
+        // Handle features object directly
+        updatedTier.features = { ...updatedTier.features, ...value };
+      } else if (allowedFields.includes(key)) {
         const keys = key.split('.');
         let current = updatedTier;
         

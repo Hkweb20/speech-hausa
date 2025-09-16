@@ -7,6 +7,7 @@ import { aiRouter } from './ai.routes';
 import { translationRouter } from './translation.routes';
 import usageRoutes from './usage.routes';
 import adminRoutes from './admin.routes';
+import languagesRoutes from './languages.routes';
 import { logger } from '../config/logger';
 
 export const apiRouter = Router();
@@ -18,6 +19,7 @@ apiRouter.use('/api/points', pointsRoutes);
 apiRouter.use('/api/ai', aiRouter);
 apiRouter.use('/api/translation', translationRouter);
 apiRouter.use('/api/usage', usageRoutes);
+apiRouter.use('/api/languages', languagesRoutes);
 apiRouter.use('/api/admin', adminRoutes);
 
 logger.info('AI routes registered at /api/ai');

@@ -225,12 +225,16 @@
 
         .form-row {
             display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
         }
 
         .form-row input {
-            flex: 1;
+            width: 100%;
         }
 
         .tier-form {
@@ -277,6 +281,54 @@
             background: #95a5a6;
             color: white;
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal:not(.hidden) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -305,6 +357,7 @@
                 <li><a href="#" onclick="showSection('dashboard')" class="nav-link active">Dashboard</a></li>
                 <li><a href="#" onclick="showSection('users')" class="nav-link">Users</a></li>
                 <li><a href="#" onclick="showSection('limits')" class="nav-link">Limits</a></li>
+                <li><a href="#" onclick="showSection('languages')" class="nav-link">Languages</a></li>
                 <li><a href="#" onclick="showSection('analytics')" class="nav-link">Analytics</a></li>
                 <li><a href="#" onclick="showSection('logs')" class="nav-link">Audit Logs</a></li>
                 <li><a href="#" onclick="logout()" class="nav-link">Logout</a></li>
@@ -333,6 +386,8 @@
                     <div>
                         <input type="text" id="userSearch" placeholder="Search users..." style="padding: 8px; margin-right: 10px;">
                         <button onclick="loadUsers()" class="btn">Search</button>
+                        <button onclick="testModal()" class="btn btn-info">Test Modal</button>
+                        <button onclick="showBulkUpgrade()" class="btn btn-success">Bulk Upgrade</button>
                     </div>
                 </div>
                 <div id="usersTable">
@@ -348,6 +403,20 @@
                 </div>
                 <div id="limitsContent">
                     <!-- Limits will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Languages Section -->
+            <div id="languagesSection" class="content-section hidden">
+                <div class="header">
+                    <h1>Language Management</h1>
+                    <div>
+                        <button onclick="loadLanguages()" class="btn">Refresh</button>
+                        <button onclick="showAddLanguageModal()" class="btn btn-success">Add Language</button>
+                    </div>
+                </div>
+                <div id="languagesContent">
+                    <!-- Languages will be loaded here -->
                 </div>
             </div>
 
@@ -374,6 +443,97 @@
                 <div id="logsContent">
                     <!-- Logs will be loaded here -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upgrade User Modal -->
+    <div id="upgradeModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upgrade User Subscription</h3>
+                <button onclick="closeUpgradeModal()" class="close-btn">&times;</button>
+            </div>
+            <div id="upgradeContent">
+                <!-- Upgrade form will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Upgrade Modal -->
+    <div id="bulkUpgradeModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Bulk Upgrade Users</h3>
+                <button onclick="closeBulkUpgradeModal()" class="close-btn">&times;</button>
+            </div>
+            <div id="bulkUpgradeContent">
+                <div class="form-group">
+                    <label>User IDs (comma-separated):</label>
+                    <textarea id="bulkUserIds" placeholder="user1,user2,user3..." style="width: 100%; height: 100px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Subscription Tier:</label>
+                    <select id="bulkSubscriptionTier">
+                        <option value="free">Free</option>
+                        <option value="basic">Basic</option>
+                        <option value="gold">Gold</option>
+                        <option value="premium">Premium</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Subscription Status:</label>
+                    <select id="bulkSubscriptionStatus">
+                        <option value="active">Active</option>
+                        <option value="trial">Trial</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Expiration Date (optional):</label>
+                    <input type="date" id="bulkSubscriptionExpiresAt">
+                </div>
+                <button onclick="performBulkUpgrade()" class="btn btn-success">Upgrade Users</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Language Modal -->
+    <div id="addLanguageModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Language</h3>
+                <button onclick="closeAddLanguageModal()" class="close-btn">&times;</button>
+            </div>
+            <div id="addLanguageContent">
+                <div class="form-group">
+                    <label>Language Name:</label>
+                    <input type="text" id="languageName" placeholder="e.g., Swahili" required>
+                </div>
+                <div class="form-group">
+                    <label>Language Code:</label>
+                    <input type="text" id="languageCode" placeholder="e.g., sw-KE" required>
+                    <small>Format: language-COUNTRY (e.g., sw-KE, fr-FR)</small>
+                </div>
+                <div class="form-group">
+                    <label>Language Flag Emoji:</label>
+                    <input type="text" id="languageFlag" placeholder="🇰🇪" maxlength="2">
+                </div>
+                <div class="form-group">
+                    <label>Available for Source Language:</label>
+                    <input type="checkbox" id="isSourceLanguage" checked>
+                </div>
+                <div class="form-group">
+                    <label>Available for Target Language:</label>
+                    <input type="checkbox" id="isTargetLanguage" checked>
+                </div>
+                <div class="form-group">
+                    <label>Translation Service Code:</label>
+                    <input type="text" id="translationCode" placeholder="e.g., sw" required>
+                    <small>Code used by Google Translate API</small>
+                </div>
+                <button onclick="addLanguage()" class="btn btn-success">Add Language</button>
             </div>
         </div>
     </div>
@@ -513,6 +673,9 @@
                 case 'limits':
                     loadSubscriptionTiers();
                     break;
+                case 'languages':
+                    loadLanguages();
+                    break;
                 case 'analytics':
                     loadSystemStats();
                     break;
@@ -603,6 +766,7 @@
                                 <td>${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</td>
                                 <td>
                                     <button onclick="viewUser('${user._id}')" class="btn">View</button>
+                                    <button onclick="upgradeUser('${user._id}')" class="btn btn-success">Upgrade</button>
                                     <button onclick="resetUserDaily('${user._id}')" class="btn btn-warning">Reset Daily</button>
                                 </td>
                             </tr>
@@ -634,16 +798,34 @@
                             <div class="tier-form">
                                 <h4>${tier.name} (${tierName})</h4>
                                 <div class="form-row">
-                                    <input type="number" id="${tierName}_dailyFileUploads" value="${tier.features.dailyFileUploads}" placeholder="Daily File Uploads">
-                                    <input type="number" id="${tierName}_maxFileDuration" value="${tier.features.maxFileDuration}" placeholder="Max File Duration (min)">
+                                    <div class="form-group">
+                                        <label for="${tierName}_dailyFileUploads">Daily File Uploads</label>
+                                        <input type="number" id="${tierName}_dailyFileUploads" value="${tier.features.dailyFileUploads}" placeholder="Daily File Uploads">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="${tierName}_maxFileDuration">Max File Duration (minutes)</label>
+                                        <input type="number" id="${tierName}_maxFileDuration" value="${tier.features.maxFileDuration}" placeholder="Max File Duration (min)">
+                                    </div>
                                 </div>
                                 <div class="form-row">
-                                    <input type="number" id="${tierName}_dailyLiveRecordingMinutes" value="${tier.features.dailyLiveRecordingMinutes}" placeholder="Daily Live Recording (min)">
-                                    <input type="number" id="${tierName}_dailyRealTimeStreamingMinutes" value="${tier.features.dailyRealTimeStreamingMinutes}" placeholder="Daily Real-time Streaming (min)">
+                                    <div class="form-group">
+                                        <label for="${tierName}_dailyLiveRecordingMinutes">Daily Live Recording (minutes)</label>
+                                        <input type="number" id="${tierName}_dailyLiveRecordingMinutes" value="${tier.features.dailyLiveRecordingMinutes}" placeholder="Daily Live Recording (min)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="${tierName}_dailyRealTimeStreamingMinutes">Daily Real-time Streaming (minutes)</label>
+                                        <input type="number" id="${tierName}_dailyRealTimeStreamingMinutes" value="${tier.features.dailyRealTimeStreamingMinutes}" placeholder="Daily Real-time Streaming (min)">
+                                    </div>
                                 </div>
                                 <div class="form-row">
-                                    <input type="number" id="${tierName}_dailyTranslationMinutes" value="${tier.features.dailyTranslationMinutes}" placeholder="Daily Translation (min)">
-                                    <input type="number" id="${tierName}_dailyAIRequests" value="${tier.features.dailyAIRequests}" placeholder="Daily AI Requests">
+                                    <div class="form-group">
+                                        <label for="${tierName}_dailyTranslationMinutes">Daily Translation (minutes)</label>
+                                        <input type="number" id="${tierName}_dailyTranslationMinutes" value="${tier.features.dailyTranslationMinutes}" placeholder="Daily Translation (min)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="${tierName}_dailyAIRequests">Daily AI Requests</label>
+                                        <input type="number" id="${tierName}_dailyAIRequests" value="${tier.features.dailyAIRequests}" placeholder="Daily AI Requests">
+                                    </div>
                                 </div>
                                 <button onclick="updateTier('${tierName}')" class="btn">Update ${tier.name}</button>
                             </div>
@@ -684,10 +866,13 @@
                 
                 if (data.success) {
                     showSuccess(`${tierName} tier updated successfully`);
+                    // Reload the limits to show updated values
+                    loadSubscriptionTiers();
                 } else {
                     showError(data.error || 'Failed to update tier');
                 }
             } catch (error) {
+                console.error('Update tier error:', error);
                 showError('Network error: ' + error.message);
             }
         }
@@ -834,6 +1019,381 @@
                     window.URL.revokeObjectURL(url);
                 } else {
                     showError('Failed to export report');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Upgrade user
+        async function upgradeUser(userId) {
+            console.log('Upgrade user called with ID:', userId);
+            console.log('Admin token:', adminToken);
+            console.log('Current admin:', currentAdmin);
+            alert('Upgrade user function called with ID: ' + userId);
+            try {
+                // Get user subscription info
+                const response = await fetch(`/api/admin/users/${userId}/subscription`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.success) {
+                    const user = data.user;
+                    const tierInfo = user.currentTierInfo;
+                    
+                    // Create upgrade form
+                    document.getElementById('upgradeContent').innerHTML = `
+                        <div class="form-group">
+                            <label>User:</label>
+                            <p><strong>${user.name}</strong> (${user.email})</p>
+                            <p>Current Tier: <span class="role-badge role-${user.subscriptionTier}">${user.subscriptionTier}</span></p>
+                        </div>
+                        <div class="form-group">
+                            <label>New Subscription Tier:</label>
+                            <select id="newSubscriptionTier">
+                                <option value="free" ${user.subscriptionTier === 'free' ? 'selected' : ''}>Free</option>
+                                <option value="basic" ${user.subscriptionTier === 'basic' ? 'selected' : ''}>Basic</option>
+                                <option value="gold" ${user.subscriptionTier === 'gold' ? 'selected' : ''}>Gold</option>
+                                <option value="premium" ${user.subscriptionTier === 'premium' ? 'selected' : ''}>Premium</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Subscription Status:</label>
+                            <select id="newSubscriptionStatus">
+                                <option value="active" ${user.subscriptionStatus === 'active' ? 'selected' : ''}>Active</option>
+                                <option value="trial" ${user.subscriptionStatus === 'trial' ? 'selected' : ''}>Trial</option>
+                                <option value="cancelled" ${user.subscriptionStatus === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                <option value="expired" ${user.subscriptionStatus === 'expired' ? 'selected' : ''}>Expired</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Expiration Date (optional):</label>
+                            <input type="date" id="newSubscriptionExpiresAt" value="${user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt).toISOString().split('T')[0] : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="useCustomLimits"> Use Custom Limits (override tier defaults)
+                            </label>
+                        </div>
+                        <div id="customLimitsSection" style="display: none;">
+                            <h4>Custom Limits</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="customDailyMinutes">Daily Minutes</label>
+                                    <input type="number" id="customDailyMinutes" placeholder="Daily Minutes" value="${tierInfo.features.dailyMinutes}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="customMonthlyMinutes">Monthly Minutes</label>
+                                    <input type="number" id="customMonthlyMinutes" placeholder="Monthly Minutes" value="${tierInfo.features.monthlyMinutes}">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="customDailyFileUploads">Daily File Uploads</label>
+                                    <input type="number" id="customDailyFileUploads" placeholder="Daily File Uploads" value="${tierInfo.features.dailyFileUploads}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="customMaxFileDuration">Max File Duration (minutes)</label>
+                                    <input type="number" id="customMaxFileDuration" placeholder="Max File Duration (min)" value="${tierInfo.features.maxFileDuration}">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="customDailyLiveRecordingMinutes">Daily Live Recording (minutes)</label>
+                                    <input type="number" id="customDailyLiveRecordingMinutes" placeholder="Daily Live Recording (min)" value="${tierInfo.features.dailyLiveRecordingMinutes}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="customDailyRealTimeStreamingMinutes">Daily Real-time Streaming (minutes)</label>
+                                    <input type="number" id="customDailyRealTimeStreamingMinutes" placeholder="Daily Real-time Streaming (min)" value="${tierInfo.features.dailyRealTimeStreamingMinutes}">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="customDailyTranslationMinutes">Daily Translation (minutes)</label>
+                                    <input type="number" id="customDailyTranslationMinutes" placeholder="Daily Translation (min)" value="${tierInfo.features.dailyTranslationMinutes}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="customDailyAIRequests">Daily AI Requests</label>
+                                    <input type="number" id="customDailyAIRequests" placeholder="Daily AI Requests" value="${tierInfo.features.dailyAIRequests}">
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="performUpgrade('${userId}')" class="btn btn-success">Upgrade User</button>
+                    `;
+                    
+                    // Show/hide custom limits section
+                    document.getElementById('useCustomLimits').addEventListener('change', function() {
+                        const customSection = document.getElementById('customLimitsSection');
+                        customSection.style.display = this.checked ? 'block' : 'none';
+                    });
+                    
+                    console.log('Showing upgrade modal');
+                    document.getElementById('upgradeModal').classList.remove('hidden');
+                    console.log('Modal classes after remove hidden:', document.getElementById('upgradeModal').className);
+                } else {
+                    showError(data.error || 'Failed to load user info');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Perform user upgrade
+        async function performUpgrade(userId) {
+            try {
+                const subscriptionTier = document.getElementById('newSubscriptionTier').value;
+                const subscriptionStatus = document.getElementById('newSubscriptionStatus').value;
+                const subscriptionExpiresAt = document.getElementById('newSubscriptionExpiresAt').value;
+                const useCustomLimits = document.getElementById('useCustomLimits').checked;
+                
+                const upgradeData = {
+                    subscriptionTier,
+                    subscriptionStatus,
+                    subscriptionExpiresAt: subscriptionExpiresAt || null
+                };
+                
+                if (useCustomLimits) {
+                    upgradeData.customLimits = {
+                        dailyMinutes: parseInt(document.getElementById('customDailyMinutes').value),
+                        monthlyMinutes: parseInt(document.getElementById('customMonthlyMinutes').value),
+                        dailyFileUploads: parseInt(document.getElementById('customDailyFileUploads').value),
+                        maxFileDuration: parseInt(document.getElementById('customMaxFileDuration').value),
+                        dailyLiveRecordingMinutes: parseInt(document.getElementById('customDailyLiveRecordingMinutes').value),
+                        dailyRealTimeStreamingMinutes: parseInt(document.getElementById('customDailyRealTimeStreamingMinutes').value),
+                        dailyTranslationMinutes: parseInt(document.getElementById('customDailyTranslationMinutes').value),
+                        dailyAIRequests: parseInt(document.getElementById('customDailyAIRequests').value)
+                    };
+                }
+                
+                const response = await fetch(`/api/admin/users/${userId}/upgrade`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(upgradeData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(data.message);
+                    closeUpgradeModal();
+                    loadUsers();
+                } else {
+                    showError(data.error || 'Failed to upgrade user');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Close upgrade modal
+        function closeUpgradeModal() {
+            document.getElementById('upgradeModal').classList.add('hidden');
+        }
+
+        // Show bulk upgrade modal
+        function showBulkUpgrade() {
+            document.getElementById('bulkUpgradeModal').classList.remove('hidden');
+        }
+
+        // Close bulk upgrade modal
+        function closeBulkUpgradeModal() {
+            document.getElementById('bulkUpgradeModal').classList.add('hidden');
+        }
+
+        // Test modal function
+        function testModal() {
+            console.log('Test modal called');
+            document.getElementById('upgradeContent').innerHTML = '<p>Test modal content</p>';
+            document.getElementById('upgradeModal').classList.remove('hidden');
+            console.log('Modal classes after remove hidden:', document.getElementById('upgradeModal').className);
+        }
+
+        // Perform bulk upgrade
+        async function performBulkUpgrade() {
+            try {
+                const userIds = document.getElementById('bulkUserIds').value.split(',').map(id => id.trim()).filter(id => id);
+                const subscriptionTier = document.getElementById('bulkSubscriptionTier').value;
+                const subscriptionStatus = document.getElementById('bulkSubscriptionStatus').value;
+                const subscriptionExpiresAt = document.getElementById('bulkSubscriptionExpiresAt').value;
+                
+                if (userIds.length === 0) {
+                    showError('Please enter at least one user ID');
+                    return;
+                }
+                
+                const upgradeData = {
+                    userIds,
+                    subscriptionTier,
+                    subscriptionStatus,
+                    subscriptionExpiresAt: subscriptionExpiresAt || null
+                };
+                
+                const response = await fetch('/api/admin/users/bulk-upgrade', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(upgradeData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(data.message);
+                    closeBulkUpgradeModal();
+                    loadUsers();
+                } else {
+                    showError(data.error || 'Failed to bulk upgrade users');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Load languages
+        async function loadLanguages() {
+            try {
+                const response = await fetch('/api/admin/languages', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let tableHTML = `
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Code</th>
+                                    <th>Flag</th>
+                                    <th>Source</th>
+                                    <th>Target</th>
+                                    <th>Translation Code</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.languages.forEach(lang => {
+                        tableHTML += `
+                            <tr>
+                                <td>${lang.name}</td>
+                                <td><code>${lang.code}</code></td>
+                                <td>${lang.flag || '🌍'}</td>
+                                <td>${lang.isSourceLanguage ? '✅' : '❌'}</td>
+                                <td>${lang.isTargetLanguage ? '✅' : '❌'}</td>
+                                <td><code>${lang.translationCode}</code></td>
+                                <td>
+                                    <button onclick="editLanguage('${lang.id}')" class="btn">Edit</button>
+                                    <button onclick="deleteLanguage('${lang.id}')" class="btn btn-danger">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    document.getElementById('languagesContent').innerHTML = tableHTML;
+                }
+            } catch (error) {
+                console.error('Error loading languages:', error);
+                showError('Failed to load languages: ' + error.message);
+            }
+        }
+
+        // Show add language modal
+        function showAddLanguageModal() {
+            // Clear form
+            document.getElementById('languageName').value = '';
+            document.getElementById('languageCode').value = '';
+            document.getElementById('languageFlag').value = '';
+            document.getElementById('isSourceLanguage').checked = true;
+            document.getElementById('isTargetLanguage').checked = true;
+            document.getElementById('translationCode').value = '';
+            
+            document.getElementById('addLanguageModal').classList.remove('hidden');
+        }
+
+        // Close add language modal
+        function closeAddLanguageModal() {
+            document.getElementById('addLanguageModal').classList.add('hidden');
+        }
+
+        // Add language
+        async function addLanguage() {
+            try {
+                const languageData = {
+                    name: document.getElementById('languageName').value,
+                    code: document.getElementById('languageCode').value,
+                    flag: document.getElementById('languageFlag').value,
+                    isSourceLanguage: document.getElementById('isSourceLanguage').checked,
+                    isTargetLanguage: document.getElementById('isTargetLanguage').checked,
+                    translationCode: document.getElementById('translationCode').value
+                };
+
+                if (!languageData.name || !languageData.code || !languageData.translationCode) {
+                    showError('Please fill in all required fields');
+                    return;
+                }
+
+                const response = await fetch('/api/admin/languages', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(languageData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Language added successfully');
+                    closeAddLanguageModal();
+                    loadLanguages();
+                } else {
+                    showError(data.error || 'Failed to add language');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Edit language
+        async function editLanguage(languageId) {
+            // For now, just show a simple edit form
+            // In a full implementation, you'd load the language data and show an edit modal
+            showError('Edit functionality not yet implemented');
+        }
+
+        // Delete language
+        async function deleteLanguage(languageId) {
+            if (!confirm('Are you sure you want to delete this language? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/languages/${languageId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Language deleted successfully');
+                    loadLanguages();
+                } else {
+                    showError(data.error || 'Failed to delete language');
                 }
             } catch (error) {
                 showError('Network error: ' + error.message);

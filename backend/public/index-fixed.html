@@ -801,7 +801,36 @@
         <!-- File Upload Feature -->
         <div class="feature-card">
           <h3>📁 Upload Audio File</h3>
-          <p>Upload an audio file and get it transcribed instantly. Supports MP3, WAV, WebM, and more formats.</p>
+          <p>Upload an audio file and get it transcribed and translated. Supports MP3, WAV, WebM, and more formats.</p>
+          
+          <!-- Language Selection -->
+          <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <h4 style="margin-bottom: 15px; color: #333;">Language Selection</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div class="form-group">
+                <label for="sourceLanguage">Source Language (Audio Language)</label>
+                <select id="sourceLanguage" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="ha-NG">Hausa (Default)</option>
+                  <option value="yo-NG">Yoruba</option>
+                  <option value="ig-NG">Igbo</option>
+                  <option value="ar-SA">Arabic</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="targetLanguage">Target Language (Translation)</label>
+                <select id="targetLanguage" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="ha-NG">Hausa</option>
+                  <option value="yo-NG">Yoruba</option>
+                  <option value="ig-NG">Igbo</option>
+                  <option value="ar-SA">Arabic</option>
+                  <option value="en-US">English</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+              <strong>Note:</strong> If source and target languages are the same, only transcription will be performed.
+            </div>
+          </div>
           
           <!-- Upload Limits Warning -->
           <div id="uploadLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
@@ -815,7 +844,7 @@
             <button class="upload-btn" id="uploadBtn">Choose File</button>
           </div>
           <div class="result-area" id="uploadResult">
-            <div class="transcript-text">Your transcription will appear here...</div>
+            <div class="transcript-text">Your transcription and translation will appear here...</div>
             
             <!-- AI Features Warning -->
             <div id="uploadAiLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
@@ -838,7 +867,36 @@
         <!-- Live Recording Feature -->
         <div class="feature-card">
           <h3>🎙️ Live Recording</h3>
-          <p>Record directly from your microphone and get real-time transcription with live streaming.</p>
+          <p>Record directly from your microphone and get real-time transcription and translation.</p>
+          
+          <!-- Language Selection -->
+          <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <h4 style="margin-bottom: 15px; color: #333;">Language Selection</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div class="form-group">
+                <label for="recordSourceLanguage">Source Language (Speaking Language)</label>
+                <select id="recordSourceLanguage" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="ha-NG">🇳🇬 Hausa (Default)</option>
+                  <option value="yo-NG">🇳🇬 Yoruba</option>
+                  <option value="ig-NG">🇳🇬 Igbo</option>
+                  <option value="ar-SA">🇸🇦 Arabic</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="recordTargetLanguage">Target Language (Translation)</label>
+                <select id="recordTargetLanguage" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="ha-NG">🇳🇬 Hausa</option>
+                  <option value="yo-NG">🇳🇬 Yoruba</option>
+                  <option value="ig-NG">🇳🇬 Igbo</option>
+                  <option value="ar-SA">🇸🇦 Arabic</option>
+                  <option value="en-US">🇺🇸 English</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+              <strong>Note:</strong> If source and target languages are the same, only transcription will be performed.
+            </div>
+          </div>
           
           <!-- Live Recording Limits Warning -->
           <div id="liveRecordingLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
@@ -852,7 +910,7 @@
           </div>
           <audio id="playback" controls style="width: 100%; margin-bottom: 15px;"></audio>
           <div class="result-area" id="recordResult">
-            <div class="transcript-text">Your live transcription will appear here...</div>
+            <div class="transcript-text">Your live transcription and translation will appear here...</div>
             
             <!-- AI Features Warning -->
             <div id="recordAiLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
@@ -1835,13 +1893,18 @@
         return;
       }
       
+      // Get selected languages
+      const sourceLanguage = document.getElementById('sourceLanguage').value;
+      const targetLanguage = document.getElementById('targetLanguage').value;
+      
       showLoading('Transcribing audio...', 'uploadResult');
-      log('Uploading file: ' + file.name + ` (${formatMinutes(durationMinutes)})`);
+      log('Uploading file: ' + file.name + ` (${formatMinutes(durationMinutes)}) - Source: ${sourceLanguage}, Target: ${targetLanguage}`);
 
       const formData = new FormData();
       formData.append('audio', file);
-      formData.append('languageCode', 'ha-NG');
+      formData.append('languageCode', sourceLanguage);
       formData.append('sampleRateHertz', '16000');
+      formData.append('targetLanguage', targetLanguage);
 
       try {
         const response = await fetch('/api/stt/transcribe', {
@@ -1854,10 +1917,33 @@
 
         if (response.ok) {
           const durationMinutes = data.duration / 60;
-          document.getElementById('uploadResult').innerHTML = `
-            <div class="transcript-text">${data.transcript}</div>
-            <div class="success">Transcription completed successfully! Duration: ${formatMinutes(durationMinutes)}</div>
+          
+          // Display results based on whether translation was performed
+          let resultHTML = '';
+          
+          if (data.transcript) {
+            resultHTML += `
+              <div class="ai-result">
+                <h4>📝 Transcription (${getLanguageName(sourceLanguage)}):</h4>
+                <div class="ai-result-text">${data.transcript}</div>
+              </div>
+            `;
+          }
+          
+          if (data.translation && sourceLanguage !== targetLanguage) {
+            resultHTML += `
+              <div class="ai-result">
+                <h4>🌍 Translation (${getLanguageName(targetLanguage)}):</h4>
+                <div class="ai-result-text">${data.translation}</div>
+              </div>
+            `;
+          }
+          
+          resultHTML += `
+            <div class="success">Processing completed successfully! Duration: ${formatMinutes(durationMinutes)}</div>
           `;
+          
+          document.getElementById('uploadResult').innerHTML = resultHTML;
           showAiButtons('uploadResult');
           log('Transcription successful');
           
@@ -2070,11 +2156,18 @@
     async function handleRecordedAudio(blob) {
       log('Transcribing recorded audio...');
 
+      // Get selected languages from Live Recording form
+      const sourceLanguage = document.getElementById('recordSourceLanguage').value;
+      const targetLanguage = document.getElementById('recordTargetLanguage').value;
+      
+      log(`Live recording languages - Source: ${sourceLanguage}, Target: ${targetLanguage}`);
+
       const formData = new FormData();
       formData.append('audio', blob);
-      formData.append('languageCode', 'ha-NG');
+      formData.append('languageCode', sourceLanguage);
       formData.append('sampleRateHertz', '16000');
       formData.append('source', 'live-recording'); // Mark as live recording
+      formData.append('targetLanguage', targetLanguage);
 
       try {
         const response = await fetch('/api/stt/transcribe', {
@@ -2087,10 +2180,33 @@
 
         if (response.ok) {
           const durationMinutes = data.duration / 60;
-          document.getElementById('recordResult').innerHTML = `
-            <div class="transcript-text">${data.transcript}</div>
-            <div class="success">Recording transcribed successfully! Duration: ${formatMinutes(durationMinutes)}</div>
+          
+          // Display results based on whether translation was performed
+          let resultHTML = '';
+          
+          if (data.transcript) {
+            resultHTML += `
+              <div class="ai-result">
+                <h4>📝 Transcription (${getLanguageName(sourceLanguage)}):</h4>
+                <div class="ai-result-text">${data.transcript}</div>
+              </div>
+            `;
+          }
+          
+          if (data.translation && sourceLanguage !== targetLanguage) {
+            resultHTML += `
+              <div class="ai-result">
+                <h4>🌍 Translation (${getLanguageName(targetLanguage)}):</h4>
+                <div class="ai-result-text">${data.translation}</div>
+              </div>
+            `;
+          }
+          
+          resultHTML += `
+            <div class="success">Recording processed successfully! Duration: ${formatMinutes(durationMinutes)}</div>
           `;
+          
+          document.getElementById('recordResult').innerHTML = resultHTML;
           showAiButtons('recordResult');
           log('Recording transcription successful');
           
@@ -3023,11 +3139,189 @@
       return flags[languageCode] || '🌍';
     }
 
+    // Get language name from language code
+    function getLanguageName(languageCode) {
+      const languageNames = {
+        'ha-NG': 'Hausa',
+        'yo-NG': 'Yoruba',
+        'ig-NG': 'Igbo',
+        'ar-SA': 'Arabic',
+        'en-US': 'English'
+      };
+      return languageNames[languageCode] || languageCode;
+    }
+
+    // Load available languages from public API
+    async function loadAvailableLanguages() {
+      try {
+        log('Loading languages from API...');
+        const response = await fetch('/api/languages/available');
+        log('API response status: ' + response.status);
+        
+        const data = await response.json();
+        log('API response data: ' + JSON.stringify(data));
+        
+        if (data.success) {
+          // Upload form language selects
+          const sourceSelect = document.getElementById('sourceLanguage');
+          const targetSelect = document.getElementById('targetLanguage');
+          
+          // Live recording form language selects
+          const recordSourceSelect = document.getElementById('recordSourceLanguage');
+          const recordTargetSelect = document.getElementById('recordTargetLanguage');
+          
+          if (!sourceSelect || !targetSelect || !recordSourceSelect || !recordTargetSelect) {
+            log('Language select elements not found!');
+            return;
+          }
+          
+          // Clear existing options
+          sourceSelect.innerHTML = '';
+          targetSelect.innerHTML = '';
+          recordSourceSelect.innerHTML = '';
+          recordTargetSelect.innerHTML = '';
+          
+          // Add source languages
+          let sourceCount = 0;
+          data.languages.forEach(lang => {
+            // Default to true if property is missing (for backward compatibility)
+            const isSource = lang.isSourceLanguage !== undefined ? lang.isSourceLanguage : true;
+            log(`Processing language: ${lang.name}, isSourceLanguage: ${isSource}`);
+            if (isSource) {
+              // Upload form
+              const option = document.createElement('option');
+              option.value = lang.code;
+              option.textContent = `${lang.flag} ${lang.name}`;
+              if (lang.code === 'ha-NG') option.selected = true; // Default to Hausa
+              sourceSelect.appendChild(option);
+              
+              // Live recording form
+              const recordOption = document.createElement('option');
+              recordOption.value = lang.code;
+              recordOption.textContent = `${lang.flag} ${lang.name}`;
+              if (lang.code === 'ha-NG') recordOption.selected = true; // Default to Hausa
+              recordSourceSelect.appendChild(recordOption);
+              
+              sourceCount++;
+              log(`Added source language: ${lang.name}`);
+            }
+          });
+          
+          // Add target languages
+          let targetCount = 0;
+          data.languages.forEach(lang => {
+            // Default to true if property is missing (for backward compatibility)
+            const isTarget = lang.isTargetLanguage !== undefined ? lang.isTargetLanguage : true;
+            log(`Processing language: ${lang.name}, isTargetLanguage: ${isTarget}`);
+            if (isTarget) {
+              // Upload form
+              const option = document.createElement('option');
+              option.value = lang.code;
+              option.textContent = `${lang.flag} ${lang.name}`;
+              if (lang.code === 'ha-NG') option.selected = true; // Default to Hausa
+              targetSelect.appendChild(option);
+              
+              // Live recording form
+              const recordOption = document.createElement('option');
+              recordOption.value = lang.code;
+              recordOption.textContent = `${lang.flag} ${lang.name}`;
+              if (lang.code === 'ha-NG') recordOption.selected = true; // Default to Hausa
+              recordTargetSelect.appendChild(recordOption);
+              
+              targetCount++;
+              log(`Added target language: ${lang.name}`);
+            }
+          });
+          
+          log(`Added ${sourceCount} source languages and ${targetCount} target languages to both forms`);
+          
+          log(`Successfully loaded ${data.languages.length} languages from API`);
+        } else {
+          log('API returned success: false - ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        log('Error loading languages from API: ' + error.message);
+        log('Error details: ' + error.stack);
+        // Fallback to default languages if API fails
+        loadDefaultLanguages();
+      }
+    }
+
+    // Fallback function to load default languages
+    function loadDefaultLanguages() {
+      log('Loading default languages as fallback...');
+      
+      const defaultLanguages = [
+        { code: 'ha-NG', name: 'Hausa', flag: '🇳🇬', isSourceLanguage: true, isTargetLanguage: true },
+        { code: 'yo-NG', name: 'Yoruba', flag: '🇳🇬', isSourceLanguage: true, isTargetLanguage: true },
+        { code: 'ig-NG', name: 'Igbo', flag: '🇳🇬', isSourceLanguage: true, isTargetLanguage: true },
+        { code: 'ar-SA', name: 'Arabic', flag: '🇸🇦', isSourceLanguage: true, isTargetLanguage: true },
+        { code: 'en-US', name: 'English', flag: '🇺🇸', isSourceLanguage: false, isTargetLanguage: true }
+      ];
+      
+      const sourceSelect = document.getElementById('sourceLanguage');
+      const targetSelect = document.getElementById('targetLanguage');
+      const recordSourceSelect = document.getElementById('recordSourceLanguage');
+      const recordTargetSelect = document.getElementById('recordTargetLanguage');
+      
+      if (!sourceSelect || !targetSelect || !recordSourceSelect || !recordTargetSelect) {
+        log('Language select elements not found in fallback!');
+        return;
+      }
+      
+      // Clear existing options
+      sourceSelect.innerHTML = '';
+      targetSelect.innerHTML = '';
+      recordSourceSelect.innerHTML = '';
+      recordTargetSelect.innerHTML = '';
+      
+      // Add source languages
+      defaultLanguages.forEach(lang => {
+        if (lang.isSourceLanguage) {
+          // Upload form
+          const option = document.createElement('option');
+          option.value = lang.code;
+          option.textContent = `${lang.flag} ${lang.name}`;
+          if (lang.code === 'ha-NG') option.selected = true; // Default to Hausa
+          sourceSelect.appendChild(option);
+          
+          // Live recording form
+          const recordOption = document.createElement('option');
+          recordOption.value = lang.code;
+          recordOption.textContent = `${lang.flag} ${lang.name}`;
+          if (lang.code === 'ha-NG') recordOption.selected = true; // Default to Hausa
+          recordSourceSelect.appendChild(recordOption);
+        }
+      });
+      
+      // Add target languages
+      defaultLanguages.forEach(lang => {
+        if (lang.isTargetLanguage) {
+          // Upload form
+          const option = document.createElement('option');
+          option.value = lang.code;
+          option.textContent = `${lang.flag} ${lang.name}`;
+          if (lang.code === 'ha-NG') option.selected = true; // Default to Hausa
+          targetSelect.appendChild(option);
+          
+          // Live recording form
+          const recordOption = document.createElement('option');
+          recordOption.value = lang.code;
+          recordOption.textContent = `${lang.flag} ${lang.name}`;
+          if (lang.code === 'ha-NG') recordOption.selected = true; // Default to Hausa
+          recordTargetSelect.appendChild(recordOption);
+        }
+      });
+      
+      log('Default languages loaded successfully');
+    }
+
     // Initialize the app
     document.addEventListener('DOMContentLoaded', () => {
       try {
         setupFileUpload();
         loadAuthState(); // Load saved authentication state
+        loadAvailableLanguages(); // Load languages from admin API
         log('App initialized');
         
         // Test if JavaScript is working

@@ -287,6 +287,218 @@ export async function resetUserMonthlyLimits(req: AdminRequest, res: Response) {
   }
 }
 
+export async function upgradeUser(req: AdminRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { subscriptionTier, subscriptionStatus, subscriptionExpiresAt, customLimits } = req.body;
+    
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const oldTier = user.subscriptionTier;
+    const oldStatus = user.subscriptionStatus;
+
+    // Update subscription details
+    const updateData: any = {
+      subscriptionTier,
+      subscriptionStatus: subscriptionStatus || 'active',
+      updatedAt: new Date()
+    };
+
+    // Set expiration date if provided
+    if (subscriptionExpiresAt) {
+      updateData.subscriptionExpiresAt = new Date(subscriptionExpiresAt);
+    }
+
+    // Apply custom limits if provided
+    if (customLimits) {
+      // Custom limits override the tier defaults
+      updateData.customLimits = {
+        dailyMinutes: customLimits.dailyMinutes,
+        monthlyMinutes: customLimits.monthlyMinutes,
+        dailyFileUploads: customLimits.dailyFileUploads,
+        maxFileDuration: customLimits.maxFileDuration,
+        dailyLiveRecordingMinutes: customLimits.dailyLiveRecordingMinutes,
+        dailyRealTimeStreamingMinutes: customLimits.dailyRealTimeStreamingMinutes,
+        dailyTranslationMinutes: customLimits.dailyTranslationMinutes,
+        dailyAIRequests: customLimits.dailyAIRequests,
+        monthlyAIRequests: customLimits.monthlyAIRequests,
+        aiFeatures: customLimits.aiFeatures,
+        exportFormats: customLimits.exportFormats,
+        cloudSync: customLimits.cloudSync,
+        offlineMode: customLimits.offlineMode,
+        prioritySupport: customLimits.prioritySupport,
+        apiAccess: customLimits.apiAccess
+      };
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    // Log the admin action
+    await AdminLog.create({
+      adminId: req.admin!._id.toString(),
+      adminEmail: req.admin!.email,
+      action: 'update_user',
+      resource: 'user',
+      resourceId: id,
+      details: {
+        userId: id,
+        action: 'subscription_upgrade',
+        oldTier,
+        newTier: subscriptionTier,
+        oldStatus,
+        newStatus: subscriptionStatus,
+        customLimits: customLimits || null,
+        subscriptionExpiresAt: subscriptionExpiresAt || null
+      },
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown'
+    });
+
+    logger.info({ 
+      adminId: req.admin!._id, 
+      userId: id,
+      oldTier,
+      newTier: subscriptionTier,
+      customLimits: !!customLimits
+    }, 'User subscription upgraded by admin');
+
+    res.json({
+      success: true,
+      message: `User upgraded to ${subscriptionTier} tier successfully`,
+      user: updatedUser
+    });
+
+  } catch (error) {
+    logger.error({ error, userId: req.params.id }, 'Error upgrading user');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upgrade user'
+    });
+  }
+}
+
+export async function bulkUpgradeUsers(req: AdminRequest, res: Response) {
+  try {
+    const { userIds, subscriptionTier, subscriptionStatus, subscriptionExpiresAt, customLimits } = req.body;
+    
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'User IDs array is required'
+      });
+    }
+
+    const updateData: any = {
+      subscriptionTier,
+      subscriptionStatus: subscriptionStatus || 'active',
+      updatedAt: new Date()
+    };
+
+    if (subscriptionExpiresAt) {
+      updateData.subscriptionExpiresAt = new Date(subscriptionExpiresAt);
+    }
+
+    if (customLimits) {
+      updateData.customLimits = customLimits;
+    }
+
+    // Update all users
+    const result = await User.updateMany(
+      { _id: { $in: userIds } },
+      { $set: updateData }
+    );
+
+    // Log the admin action
+    await AdminLog.create({
+      adminId: req.admin!._id.toString(),
+      adminEmail: req.admin!.email,
+      action: 'update_user',
+      resource: 'user',
+      details: {
+        action: 'bulk_subscription_upgrade',
+        userIds,
+        newTier: subscriptionTier,
+        newStatus: subscriptionStatus,
+        customLimits: customLimits || null,
+        usersAffected: result.modifiedCount
+      },
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown'
+    });
+
+    logger.info({ 
+      adminId: req.admin!._id, 
+      userIds: userIds.length,
+      newTier: subscriptionTier,
+      usersAffected: result.modifiedCount
+    }, 'Bulk user subscription upgrade by admin');
+
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} users upgraded to ${subscriptionTier} tier successfully`,
+      usersAffected: result.modifiedCount
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Error bulk upgrading users');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to bulk upgrade users'
+    });
+  }
+}
+
+export async function getUserSubscriptionInfo(req: AdminRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    
+    const user = await User.findById(id).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Get subscription tier info
+    const { SUBSCRIPTION_TIERS } = await import('../config/subscription');
+    const tierInfo = SUBSCRIPTION_TIERS[user.subscriptionTier];
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionExpiresAt: user.subscriptionExpiresAt,
+        customLimits: user.customLimits || null,
+        currentTierInfo: tierInfo,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin
+      }
+    });
+
+  } catch (error) {
+    logger.error({ error, userId: req.params.id }, 'Error getting user subscription info');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user subscription info'
+    });
+  }
+}
+
 export async function deleteUser(req: AdminRequest, res: Response) {
   try {
     const { id } = req.params;

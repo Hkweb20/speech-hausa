@@ -53,6 +53,36 @@ export interface AIUsageCheckResult {
 
 export class UsageService {
   /**
+   * Get effective limits for a user (tier limits or custom limits if set)
+   */
+  private getEffectiveLimits(user: IUser) {
+    const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+    
+    // If user has custom limits, use those; otherwise use tier limits
+    if (user.customLimits) {
+      return {
+        dailyMinutes: user.customLimits.dailyMinutes ?? tier.features.dailyMinutes,
+        monthlyMinutes: user.customLimits.monthlyMinutes ?? tier.features.monthlyMinutes,
+        dailyFileUploads: user.customLimits.dailyFileUploads ?? tier.features.dailyFileUploads,
+        maxFileDuration: user.customLimits.maxFileDuration ?? tier.features.maxFileDuration,
+        dailyLiveRecordingMinutes: user.customLimits.dailyLiveRecordingMinutes ?? tier.features.dailyLiveRecordingMinutes,
+        dailyRealTimeStreamingMinutes: user.customLimits.dailyRealTimeStreamingMinutes ?? tier.features.dailyRealTimeStreamingMinutes,
+        dailyTranslationMinutes: user.customLimits.dailyTranslationMinutes ?? tier.features.dailyTranslationMinutes,
+        dailyAIRequests: user.customLimits.dailyAIRequests ?? tier.features.dailyAIRequests,
+        monthlyAIRequests: user.customLimits.monthlyAIRequests ?? tier.features.monthlyAIRequests,
+        aiFeatures: user.customLimits.aiFeatures ?? tier.features.aiFeatures,
+        exportFormats: user.customLimits.exportFormats ?? tier.features.exportFormats,
+        cloudSync: user.customLimits.cloudSync ?? tier.features.cloudSync,
+        offlineMode: user.customLimits.offlineMode ?? tier.features.offlineMode,
+        prioritySupport: user.customLimits.prioritySupport ?? tier.features.prioritySupport,
+        apiAccess: user.customLimits.apiAccess ?? tier.features.apiAccess
+      };
+    }
+    
+    return tier.features;
+  }
+
+  /**
    * Check if user can perform transcription based on their subscription tier
    */
   async checkTranscriptionUsage(
@@ -1243,32 +1273,33 @@ export class UsageService {
       }
 
       const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const effectiveLimits = this.getEffectiveLimits(user);
       
       return {
         usage: user.usageStats,
         points: user.pointsBalance,
         tier: user.subscriptionTier,
-                limits: {
-                  dailyMinutes: tier.features.dailyMinutes,
-                  monthlyMinutes: tier.features.monthlyMinutes,
-                  maxFileSize: tier.features.maxFileSize,
-                  maxTranscripts: tier.features.maxTranscripts,
-                  dailyAdWatches: tier.limits.dailyAdWatches,
-                  maxPointsBalance: tier.limits.maxPointsBalance,
-                  // File upload limits
-                  dailyFileUploads: tier.features.dailyFileUploads,
-                  maxFileDuration: tier.features.maxFileDuration,
-                  // Live recording limits
-                  dailyLiveRecordingMinutes: tier.features.dailyLiveRecordingMinutes,
-                  // Real-time streaming limits
-                  dailyRealTimeStreamingMinutes: tier.features.dailyRealTimeStreamingMinutes,
-                  // Translation limits
-                  dailyTranslationMinutes: tier.features.dailyTranslationMinutes,
-                  // AI features limits
-                  dailyAIRequests: tier.features.dailyAIRequests,
-                  monthlyAIRequests: tier.features.monthlyAIRequests,
-                  aiFeatures: tier.features.aiFeatures
-                }
+        limits: {
+          dailyMinutes: effectiveLimits.dailyMinutes,
+          monthlyMinutes: effectiveLimits.monthlyMinutes,
+          maxFileSize: tier.features.maxFileSize,
+          maxTranscripts: tier.features.maxTranscripts,
+          dailyAdWatches: tier.limits.dailyAdWatches,
+          maxPointsBalance: tier.limits.maxPointsBalance,
+          // File upload limits
+          dailyFileUploads: effectiveLimits.dailyFileUploads,
+          maxFileDuration: effectiveLimits.maxFileDuration,
+          // Live recording limits
+          dailyLiveRecordingMinutes: effectiveLimits.dailyLiveRecordingMinutes,
+          // Real-time streaming limits
+          dailyRealTimeStreamingMinutes: effectiveLimits.dailyRealTimeStreamingMinutes,
+          // Translation limits
+          dailyTranslationMinutes: effectiveLimits.dailyTranslationMinutes,
+          // AI features limits
+          dailyAIRequests: effectiveLimits.dailyAIRequests,
+          monthlyAIRequests: effectiveLimits.monthlyAIRequests,
+          aiFeatures: effectiveLimits.aiFeatures
+        }
       };
 
     } catch (error) {

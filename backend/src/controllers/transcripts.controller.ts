@@ -12,7 +12,7 @@ export async function transcribeUpload(req: AuthenticatedRequest, res: Response)
   const file = (req as any).file as Express.Multer.File | undefined;
   if (!file) return res.status(400).json({ message: 'No file uploaded' });
   
-  const { sampleRateHertz, languageCode, encoding, source } = req.body || {};
+  const { sampleRateHertz, languageCode, encoding, source, targetLanguage } = req.body || {};
   const duration = file.buffer.length / (16000 * 2); // Estimate duration in seconds
   const durationMinutes = duration / 60; // Convert to minutes
   
@@ -97,6 +97,29 @@ export async function transcribeUpload(req: AuthenticatedRequest, res: Response)
     const now = new Date().toISOString();
     const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     
+    // Perform translation if target language is different from source language
+    let translation = '';
+    if (targetLanguage && targetLanguage !== languageCode && transcript.trim()) {
+      try {
+        console.log(`Translating from ${languageCode} to ${targetLanguage}:`, transcript);
+        
+        // Import translation service
+        const { translateText } = await import('../services/translation.service');
+        
+        // Map language codes for translation service
+        const sourceLang = languageCode?.split('-')[0] || 'ha';
+        const targetLang = targetLanguage?.split('-')[0] || 'en';
+        
+        const translationResult = await translateText(transcript, sourceLang, targetLang);
+        translation = translationResult.translatedText;
+        
+        console.log('Translation result:', translation);
+      } catch (error) {
+        console.error('Translation failed:', error);
+        // Continue without translation if it fails
+      }
+    }
+    
     const t: Transcript = {
       id,
       userId,
@@ -132,6 +155,7 @@ export async function transcribeUpload(req: AuthenticatedRequest, res: Response)
     
     return res.json({ 
       transcript, 
+      translation: translation || undefined,
       id, 
       duration: actualDuration,
       isPremium: !!req.user

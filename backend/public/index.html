@@ -424,14 +424,44 @@
         <!-- File Upload Feature -->
         <div class="feature-card">
           <h3>📁 Upload Audio File</h3>
-          <p>Upload an audio file and get it transcribed instantly. Supports MP3, WAV, WebM, and more formats.</p>
+          <p>Upload an audio file and get it transcribed and translated. Supports MP3, WAV, WebM, and more formats.</p>
+          
+          <!-- Language Selection -->
+          <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <h4 style="margin-bottom: 15px; color: #333;">Language Selection</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div class="form-group">
+                <label for="sourceLanguage">Source Language (Audio Language)</label>
+                <select id="sourceLanguage" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="ha-NG">Hausa (Default)</option>
+                  <option value="yo-NG">Yoruba</option>
+                  <option value="ig-NG">Igbo</option>
+                  <option value="ar-SA">Arabic</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="targetLanguage">Target Language (Translation)</label>
+                <select id="targetLanguage" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="ha-NG">Hausa</option>
+                  <option value="yo-NG">Yoruba</option>
+                  <option value="ig-NG">Igbo</option>
+                  <option value="ar-SA">Arabic</option>
+                  <option value="en-US">English</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+              <strong>Note:</strong> If source and target languages are the same, only transcription will be performed.
+            </div>
+          </div>
+
           <div class="upload-area" id="uploadArea">
             <p>Drag & drop your audio file here or click to browse</p>
             <input type="file" id="fileInput" class="file-input" accept="audio/*">
             <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
           </div>
           <div class="result-area" id="uploadResult">
-            <div class="transcript-text">Your transcription will appear here...</div>
+            <div class="transcript-text">Your transcription and translation will appear here...</div>
           </div>
         </div>
 

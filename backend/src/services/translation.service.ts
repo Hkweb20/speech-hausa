@@ -12,6 +12,46 @@ export class TranslationService {
   }
 
   /**
+   * Translate text from any language to any target language
+   */
+  async translateTextFromTo(text: string, sourceLanguage: string, targetLanguage: string): Promise<{ translatedText: string }> {
+    try {
+      if (!text || text.trim().length === 0) {
+        throw new Error('Text is required for translation');
+      }
+
+      // Validate languages
+      const supportedLanguages = ['ha', 'yo', 'ig', 'ar', 'en', 'fr'];
+      if (!supportedLanguages.includes(sourceLanguage)) {
+        throw new Error(`Unsupported source language: ${sourceLanguage}`);
+      }
+      if (!supportedLanguages.includes(targetLanguage)) {
+        throw new Error(`Unsupported target language: ${targetLanguage}`);
+      }
+
+      logger.info({ textLength: text.length, sourceLanguage, targetLanguage }, 'Starting text translation');
+
+      const [translation] = await this.translate.translate(text, {
+        from: sourceLanguage,
+        to: targetLanguage
+      });
+
+      logger.info({ 
+        originalLength: text.length, 
+        translatedLength: translation.length,
+        sourceLanguage,
+        targetLanguage 
+      }, 'Text translated successfully');
+
+      return { translatedText: translation };
+
+    } catch (error) {
+      logger.error({ error, text: text.substring(0, 100), sourceLanguage, targetLanguage }, 'Error translating text');
+      throw new Error('Failed to translate text');
+    }
+  }
+
+  /**
    * Translate text from Hausa to target language
    */
   async translateText(text: string, targetLanguage: string): Promise<string> {
@@ -455,9 +495,20 @@ export class TranslationService {
     const languageNames: { [key: string]: string } = {
       'en': 'English',
       'fr': 'French',
-      'ar': 'Arabic'
+      'ar': 'Arabic',
+      'ha': 'Hausa',
+      'yo': 'Yoruba',
+      'ig': 'Igbo'
     };
     
     return languageNames[languageCode] || 'English';
   }
+}
+
+// Create a singleton instance
+const translationService = new TranslationService();
+
+// Export standalone function for easy importing
+export async function translateText(text: string, sourceLanguage: string, targetLanguage: string): Promise<{ translatedText: string }> {
+  return translationService.translateTextFromTo(text, sourceLanguage, targetLanguage);
 }

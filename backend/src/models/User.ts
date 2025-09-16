@@ -50,6 +50,23 @@ export interface IUser extends Document {
     autoPunctuation: boolean;
     cloudSync: boolean;
   };
+  customLimits?: {
+    dailyMinutes?: number;
+    monthlyMinutes?: number;
+    dailyFileUploads?: number;
+    maxFileDuration?: number;
+    dailyLiveRecordingMinutes?: number;
+    dailyRealTimeStreamingMinutes?: number;
+    dailyTranslationMinutes?: number;
+    dailyAIRequests?: number;
+    monthlyAIRequests?: number;
+    aiFeatures?: string[];
+    exportFormats?: string[];
+    cloudSync?: boolean;
+    offlineMode?: boolean;
+    prioritySupport?: boolean;
+    apiAccess?: boolean;
+  };
   adWatchHistory: Array<{
     adId: string;
     pointsEarned: number;
@@ -125,7 +142,24 @@ const UserSchema = new Schema<IUser>({
     pointsEarned: { type: Number, required: true },
     timestamp: { type: Date, default: Date.now },
     verified: { type: Boolean, default: false }
-  }]
+  }],
+  customLimits: {
+    dailyMinutes: { type: Number },
+    monthlyMinutes: { type: Number },
+    dailyFileUploads: { type: Number },
+    maxFileDuration: { type: Number },
+    dailyLiveRecordingMinutes: { type: Number },
+    dailyRealTimeStreamingMinutes: { type: Number },
+    dailyTranslationMinutes: { type: Number },
+    dailyAIRequests: { type: Number },
+    monthlyAIRequests: { type: Number },
+    aiFeatures: [{ type: String }],
+    exportFormats: [{ type: String }],
+    cloudSync: { type: Boolean },
+    offlineMode: { type: Boolean },
+    prioritySupport: { type: Boolean },
+    apiAccess: { type: Boolean }
+  }
 });
 
 export const User = mongoose.model<IUser>('User', UserSchema);
