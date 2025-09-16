@@ -710,24 +710,43 @@
             </div>
           </div>
           
-          <!-- Live Recording Limits -->
-          <div class="upload-limits" id="liveRecordingLimits" style="display: none;">
-            <h4>🎙️ Live Recording Limits</h4>
-            <div class="limit-item">
-              <span class="limit-label">Daily Minutes:</span>
-              <span class="limit-value" id="dailyLiveRecordingMinutes">0/5</span>
-            </div>
-            <div class="limit-progress">
-              <div class="progress-bar">
-                <div class="progress-fill" id="liveRecordingProgress" style="width: 0%"></div>
-              </div>
-              <div class="limit-text" id="liveRecordingLimitText">5 minutes remaining today</div>
-            </div>
-            <div class="limit-item">
-              <span class="limit-label">Subscription:</span>
-              <span class="limit-value" id="liveRecordingSubscriptionTier">Free</span>
-            </div>
+        <!-- Live Recording Limits -->
+        <div class="upload-limits" id="liveRecordingLimits" style="display: none;">
+          <h4>🎙️ Live Recording Limits</h4>
+          <div class="limit-item">
+            <span class="limit-label">Daily Minutes:</span>
+            <span class="limit-value" id="dailyLiveRecordingMinutes">0/5</span>
           </div>
+          <div class="limit-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="liveRecordingProgress" style="width: 0%"></div>
+            </div>
+            <div class="limit-text" id="liveRecordingLimitText">5 minutes remaining today</div>
+          </div>
+          <div class="limit-item">
+            <span class="limit-label">Subscription:</span>
+            <span class="limit-value" id="liveRecordingSubscriptionTier">Free</span>
+          </div>
+        </div>
+
+        <!-- Real-time Streaming Limits -->
+        <div class="upload-limits" id="realTimeStreamingLimits" style="display: none;">
+          <h4>⚡ Real-time Streaming Limits</h4>
+          <div class="limit-item">
+            <span class="limit-label">Daily Minutes:</span>
+            <span class="limit-value" id="dailyRealTimeStreamingMinutes">0/3</span>
+          </div>
+          <div class="limit-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="realTimeStreamingProgress" style="width: 0%"></div>
+            </div>
+            <div class="limit-text" id="realTimeStreamingLimitText">3 minutes remaining today</div>
+          </div>
+          <div class="limit-item">
+            <span class="limit-label">Subscription:</span>
+            <span class="limit-value" id="realTimeStreamingSubscriptionTier">Free</span>
+          </div>
+        </div>
     </div>
 
     <!-- Main Content -->
@@ -805,6 +824,12 @@
                 <option value="online">Online (Premium)</option>
               </select>
             </label>
+          </div>
+          
+          <!-- Real-time Streaming Limits Warning -->
+          <div id="realTimeStreamingLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
+            <strong>⚡ Real-time Streaming Limits:</strong>
+            <div id="realTimeStreamingLimitsText">Loading limits...</div>
           </div>
           <div style="text-align: center; margin-bottom: 20px;">
             <button class="btn btn-primary" id="connectBtn">Connect</button>
@@ -1277,6 +1302,9 @@
           // Update live recording limits
           updateLiveRecordingLimits(usage, limits, tier);
           
+          // Update real-time streaming limits
+          updateRealTimeStreamingLimits(usage, limits, tier);
+          
           log('User stats loaded: ' + JSON.stringify(data.stats));
         }
       } catch (error) {
@@ -1337,8 +1365,8 @@
       // Show live recording limits section
       document.getElementById('liveRecordingLimits').style.display = 'block';
       
-      // Update daily live recording minutes display
-      document.getElementById('dailyLiveRecordingMinutes').textContent = `${dailyLiveRecordingMinutes}/${maxDailyLiveRecordingMinutes}`;
+      // Update daily live recording minutes display with formatted time
+      document.getElementById('dailyLiveRecordingMinutes').textContent = `${formatMinutes(dailyLiveRecordingMinutes)}/${formatMinutes(maxDailyLiveRecordingMinutes)}`;
       document.getElementById('liveRecordingSubscriptionTier').textContent = tier.toUpperCase();
       
       // Calculate progress percentage
@@ -1357,10 +1385,10 @@
       } else if (progressPercentage >= 80) {
         progressBar.classList.add('warning');
         const remaining = maxDailyLiveRecordingMinutes - dailyLiveRecordingMinutes;
-        progressText.textContent = `${remaining} minutes remaining today`;
+        progressText.textContent = `${formatMinutes(remaining)} remaining today`;
       } else {
         const remaining = maxDailyLiveRecordingMinutes - dailyLiveRecordingMinutes;
-        progressText.textContent = `${remaining} minutes remaining today`;
+        progressText.textContent = `${formatMinutes(remaining)} remaining today`;
       }
       
       // Update live recording limits warning in live recording section
@@ -1379,12 +1407,74 @@
       
       if (remaining <= 0) {
         warningClass += ' error';
-        warningText = `❌ No live recording time remaining today (${dailyLiveRecordingMinutes}/${maxDailyLiveRecordingMinutes} used).`;
-      } else if (remaining === 1) {
+        warningText = `❌ No live recording time remaining today (${formatMinutes(dailyLiveRecordingMinutes)}/${formatMinutes(maxDailyLiveRecordingMinutes)} used).`;
+      } else if (remaining <= 1) {
         warningClass += ' warning';
-        warningText = `⚠️ 1 minute remaining today (${dailyLiveRecordingMinutes}/${maxDailyLiveRecordingMinutes} used).`;
+        warningText = `⚠️ ${formatMinutes(remaining)} remaining today (${formatMinutes(dailyLiveRecordingMinutes)}/${formatMinutes(maxDailyLiveRecordingMinutes)} used).`;
       } else {
-        warningText = `✅ ${remaining} minutes remaining today (${dailyLiveRecordingMinutes}/${maxDailyLiveRecordingMinutes} used).`;
+        warningText = `✅ ${formatMinutes(remaining)} remaining today (${formatMinutes(dailyLiveRecordingMinutes)}/${formatMinutes(maxDailyLiveRecordingMinutes)} used).`;
+      }
+      
+      warningElement.className = warningClass;
+      textElement.textContent = warningText;
+      warningElement.style.display = 'block';
+    }
+
+    function updateRealTimeStreamingLimits(usage, limits, tier) {
+      const dailyRealTimeStreamingMinutes = usage.dailyRealTimeStreamingMinutes || 0;
+      const maxDailyRealTimeStreamingMinutes = limits.dailyRealTimeStreamingMinutes || 3;
+      
+      // Show real-time streaming limits section
+      document.getElementById('realTimeStreamingLimits').style.display = 'block';
+      
+      // Update daily real-time streaming minutes display with formatted time
+      document.getElementById('dailyRealTimeStreamingMinutes').textContent = `${formatMinutes(dailyRealTimeStreamingMinutes)}/${formatMinutes(maxDailyRealTimeStreamingMinutes)}`;
+      document.getElementById('realTimeStreamingSubscriptionTier').textContent = tier.toUpperCase();
+      
+      // Calculate progress percentage
+      const progressPercentage = Math.min((dailyRealTimeStreamingMinutes / maxDailyRealTimeStreamingMinutes) * 100, 100);
+      const progressBar = document.getElementById('realTimeStreamingProgress');
+      const progressText = document.getElementById('realTimeStreamingLimitText');
+      
+      // Update progress bar
+      progressBar.style.width = `${progressPercentage}%`;
+      progressBar.className = 'progress-fill';
+      
+      // Add warning/danger classes based on usage
+      if (progressPercentage >= 100) {
+        progressBar.classList.add('danger');
+        progressText.textContent = 'No real-time streaming time remaining today';
+      } else if (progressPercentage >= 80) {
+        progressBar.classList.add('warning');
+        const remaining = maxDailyRealTimeStreamingMinutes - dailyRealTimeStreamingMinutes;
+        progressText.textContent = `${formatMinutes(remaining)} remaining today`;
+      } else {
+        const remaining = maxDailyRealTimeStreamingMinutes - dailyRealTimeStreamingMinutes;
+        progressText.textContent = `${formatMinutes(remaining)} remaining today`;
+      }
+      
+      // Update real-time streaming limits warning in real-time streaming section
+      updateRealTimeStreamingLimitsWarning(dailyRealTimeStreamingMinutes, maxDailyRealTimeStreamingMinutes, tier);
+    }
+
+    function updateRealTimeStreamingLimitsWarning(dailyRealTimeStreamingMinutes, maxDailyRealTimeStreamingMinutes, tier) {
+      const warningElement = document.getElementById('realTimeStreamingLimitsWarning');
+      const textElement = document.getElementById('realTimeStreamingLimitsText');
+      
+      if (!warningElement || !textElement) return;
+      
+      const remaining = maxDailyRealTimeStreamingMinutes - dailyRealTimeStreamingMinutes;
+      let warningClass = 'usage-info';
+      let warningText = '';
+      
+      if (remaining <= 0) {
+        warningClass += ' error';
+        warningText = `❌ No real-time streaming time remaining today (${formatMinutes(dailyRealTimeStreamingMinutes)}/${formatMinutes(maxDailyRealTimeStreamingMinutes)} used).`;
+      } else if (remaining <= 1) {
+        warningClass += ' warning';
+        warningText = `⚠️ ${formatMinutes(remaining)} remaining today (${formatMinutes(dailyRealTimeStreamingMinutes)}/${formatMinutes(maxDailyRealTimeStreamingMinutes)} used).`;
+      } else {
+        warningText = `✅ ${formatMinutes(remaining)} remaining today (${formatMinutes(dailyRealTimeStreamingMinutes)}/${formatMinutes(maxDailyRealTimeStreamingMinutes)} used).`;
       }
       
       warningElement.className = warningClass;
@@ -1600,25 +1690,62 @@
           return { success: false };
         }
       }
+
+      async checkRealTimeStreamingUsage(userId, requestedMinutes) {
+        try {
+          const response = await fetch('/api/usage/check-realtime-streaming', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              userId,
+              requestedMinutes
+            })
+          });
+          
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          console.error('Error checking real-time streaming usage:', error);
+          return {
+            allowed: false,
+            remainingMinutes: 0,
+            tier: 'free',
+            reason: 'Error checking real-time streaming limits'
+          };
+        }
+      }
+
+      async recordRealTimeStreamingUsage(userId, minutes) {
+        try {
+          const response = await fetch('/api/usage/record-realtime-streaming', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              userId,
+              minutes
+            })
+          });
+          
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          console.error('Error recording real-time streaming usage:', error);
+          return { success: false };
+        }
+      }
     }
 
     // Recording functions
     async function startRecording() {
       try {
-        // Check live recording limits for authenticated users
-        if (authToken && currentUser) {
-          const usageService = new UsageService();
-          const liveRecordingCheck = await usageService.checkLiveRecordingUsage(
-            currentUser.id,
-            1 // Request 1 minute minimum (will be updated with actual duration)
-          );
-
-          if (!liveRecordingCheck.allowed) {
-            showError(`Live recording limit exceeded: ${liveRecordingCheck.reason}`, 'recordResult');
-            log(`Live recording limit exceeded: ${liveRecordingCheck.reason}`);
-            return;
-          }
-        }
+        // Note: Live recording limits are validated when the recording is uploaded
+        // with its actual duration, not during the pre-check
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         recordedChunks = [];
@@ -1772,9 +1899,30 @@
     }
 
     // WebSocket functions
-    function connectWebSocket() {
+    async function connectWebSocket() {
       const mode = document.getElementById('streamMode').value;
       const isPremium = currentUser ? currentUser.isPremium : false;
+      
+      // Check real-time streaming limits for authenticated users
+      if (authToken && currentUser) {
+        try {
+          const usageService = new UsageService();
+          const streamingCheck = await usageService.checkRealTimeStreamingUsage(
+            currentUser.id,
+            0.1 // Request 6 seconds minimum (will be tracked with actual duration)
+          );
+
+          if (!streamingCheck.allowed) {
+            showError(`Real-time streaming limit exceeded: ${streamingCheck.reason}`, 'streamResult');
+            log(`Real-time streaming limit exceeded: ${streamingCheck.reason}`);
+            return;
+          }
+        } catch (error) {
+          showError('Error checking real-time streaming limits: ' + error.message, 'streamResult');
+          log('Error checking real-time streaming limits: ' + error.message);
+          return;
+        }
+      }
       
       // Reset transcripts
       fullTranscript = '';
@@ -1782,21 +1930,32 @@
       document.getElementById('fullTranscript').textContent = 'Complete transcript will appear here...';
       document.getElementById('currentTranscript').textContent = 'Current speech will appear here...';
       
-      // Pass premium via query string for server gating
-      liveSocket = io(`/transcription?premium=${isPremium}`);
+      // Pass premium and user ID via query string for server gating and user tracking
+      const userIdParam = currentUser?.id ? `&userId=${currentUser.id}` : '';
+      liveSocket = io(`/transcription?premium=${isPremium}${userIdParam}`);
 
       liveSocket.on('connect', () => {
         log('[live] connected');
-        liveSocket.emit('join_session', { mode });
+        log('[live] currentUser:', currentUser);
+        log('[live] userId being sent:', currentUser?.id);
+        liveSocket.emit('join_session', { mode, userId: currentUser?.id });
       });
 
       liveSocket.on('session_status', (msg) => {
         log('[live] session_status ' + JSON.stringify(msg));
         liveSessionId = msg.sessionId;
-        document.getElementById('connectBtn').disabled = true;
-        document.getElementById('disconnectBtn').disabled = false;
-        document.getElementById('startMicBtn').disabled = false;
-        document.getElementById('endSessionBtn').disabled = false;
+        
+        if (msg.status === 'completed') {
+          // Session completed - refresh user stats to update limits
+          if (authToken) {
+            loadUserStats();
+          }
+        } else if (msg.status === 'active') {
+          document.getElementById('connectBtn').disabled = true;
+          document.getElementById('disconnectBtn').disabled = false;
+          document.getElementById('startMicBtn').disabled = false;
+          document.getElementById('endSessionBtn').disabled = false;
+        }
       });
 
       liveSocket.on('transcript_update', (msg) => {
@@ -1828,8 +1987,13 @@
       });
 
       liveSocket.on('error', (err) => {
-        showError('WebSocket error: ' + JSON.stringify(err), 'streamResult');
-        log('[live] error ' + JSON.stringify(err));
+        if (err.code === 'REALTIME_STREAMING_LIMIT_EXCEEDED') {
+          showError(`Real-time streaming limit exceeded: ${err.message}`, 'streamResult');
+          log(`Real-time streaming limit exceeded: ${err.message}`);
+        } else {
+          showError('WebSocket error: ' + JSON.stringify(err), 'streamResult');
+          log('[live] error ' + JSON.stringify(err));
+        }
       });
 
       liveSocket.on('disconnect', () => {
@@ -1839,6 +2003,11 @@
         document.getElementById('startMicBtn').disabled = true;
         document.getElementById('stopMicBtn').disabled = true;
         document.getElementById('endSessionBtn').disabled = true;
+        
+        // Refresh user stats to update limits after disconnect
+        if (authToken) {
+          loadUserStats();
+        }
       });
 
       document.getElementById('connectBtn').disabled = true;
@@ -1922,7 +2091,9 @@
       liveSocket.emit('end_session', { sessionId: liveSessionId });
       if (liveProcessor) liveProcessor.disconnect();
       if (liveSource) liveSource.disconnect();
-      if (liveCtx) liveCtx.close();
+      if (liveCtx && liveCtx.state !== 'closed') {
+        liveCtx.close();
+      }
       if (recStream) recStream.getTracks().forEach(t => t.stop());
       log('[live] session ended');
     }

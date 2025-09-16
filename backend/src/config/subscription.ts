@@ -19,8 +19,12 @@ export interface SubscriptionTier {
       // File upload limits
       dailyFileUploads: number; // number of file uploads per day
       maxFileDuration: number; // maximum duration per file in minutes
-      // Live recording limits
-      dailyLiveRecordingMinutes: number; // minutes of live recording per day
+            // Live recording limits
+            dailyLiveRecordingMinutes: number; // minutes of live recording per day
+            // Real-time streaming limits
+            dailyRealTimeStreamingMinutes: number; // minutes of real-time streaming per day
+            // Translation limits
+            dailyTranslationMinutes: number; // minutes of translation per day
   };
   limits: {
     dailyAdWatches: number;
@@ -52,15 +56,19 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       // File upload limits
       dailyFileUploads: 2, // 2 file uploads per day
       maxFileDuration: 3, // 3 minutes max per file
-      // Live recording limits
-      dailyLiveRecordingMinutes: 5 // 5 minutes of live recording per day
-    },
-    limits: {
-      dailyAdWatches: 5, // 5 ads per day = 50 points
-      pointsPerAd: 10,
-      maxPointsBalance: 1000
-    },
-    description: 'Perfect for occasional use with rewarded ads for extra features'
+              // Live recording limits
+              dailyLiveRecordingMinutes: 5, // 5 minutes of live recording per day
+              // Real-time streaming limits
+              dailyRealTimeStreamingMinutes: 3, // 3 minutes of real-time streaming per day
+              // Translation limits
+              dailyTranslationMinutes: 0 // No translation access for free users
+            },
+            limits: {
+              dailyAdWatches: 5, // 5 ads per day = 50 points
+              pointsPerAd: 10,
+              maxPointsBalance: 1000
+            },
+            description: 'Perfect for occasional use with rewarded ads for extra features'
   },
   basic: {
     name: 'Basic',
@@ -83,15 +91,19 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       // File upload limits
       dailyFileUploads: 5, // 5 file uploads per day
       maxFileDuration: 10, // 10 minutes max per file
-      // Live recording limits
-      dailyLiveRecordingMinutes: 10 // 10 minutes of live recording per day
-    },
-    limits: {
-      dailyAdWatches: 0, // no ads
-      pointsPerAd: 0,
-      maxPointsBalance: 0
-    },
-    description: 'Ad-free experience with cloud backup and basic AI features'
+              // Live recording limits
+              dailyLiveRecordingMinutes: 10, // 10 minutes of live recording per day
+              // Real-time streaming limits
+              dailyRealTimeStreamingMinutes: 3, // 3 minutes of real-time streaming per day
+              // Translation limits
+              dailyTranslationMinutes: 0 // No translation access for basic users
+            },
+            limits: {
+              dailyAdWatches: 0, // no ads
+              pointsPerAd: 0,
+              maxPointsBalance: 0
+            },
+            description: 'Ad-free experience with cloud backup and basic AI features'
   },
   gold: {
     name: 'Gold (Full-featured)',
@@ -121,15 +133,19 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       // File upload limits
       dailyFileUploads: 20, // 20 file uploads per day
       maxFileDuration: 60, // 60 minutes max per file
-      // Live recording limits
-      dailyLiveRecordingMinutes: 60 // 60 minutes of live recording per day
-    },
-    limits: {
-      dailyAdWatches: 0, // no ads
-      pointsPerAd: 0,
-      maxPointsBalance: 0
-    },
-    description: 'Everything you need for professional transcription work'
+              // Live recording limits
+              dailyLiveRecordingMinutes: 60, // 60 minutes of live recording per day
+              // Real-time streaming limits
+              dailyRealTimeStreamingMinutes: 10, // 10 minutes of real-time streaming per day
+              // Translation limits
+              dailyTranslationMinutes: 15 // 15 minutes of translation per day for Gold users
+            },
+            limits: {
+              dailyAdWatches: 0, // no ads
+              pointsPerAd: 0,
+              maxPointsBalance: 0
+            },
+            description: 'Everything you need for professional transcription work'
   },
   premium: {
     name: 'Premium',
@@ -162,15 +178,19 @@ export const SUBSCRIPTION_TIERS: Record<string, SubscriptionTier> = {
       // File upload limits - Premium gets 10 uploads/day, 5 min max per file
       dailyFileUploads: 10, // 10 file uploads per day
       maxFileDuration: 5, // 5 minutes max per file
-      // Live recording limits - Premium gets 30 minutes per day
-      dailyLiveRecordingMinutes: 30 // 30 minutes of live recording per day
-    },
-    limits: {
-      dailyAdWatches: 0, // no ads
-      pointsPerAd: 0,
-      maxPointsBalance: 0
-    },
-    description: 'Premium features with 10 daily uploads and 5-minute file limit'
+              // Live recording limits - Premium gets 30 minutes per day
+              dailyLiveRecordingMinutes: 30, // 30 minutes of live recording per day
+              // Real-time streaming limits - Premium gets 10 minutes per day
+              dailyRealTimeStreamingMinutes: 10, // 10 minutes of real-time streaming per day
+              // Translation limits - Premium gets 30 minutes per day
+              dailyTranslationMinutes: 30 // 30 minutes of translation per day for Premium users
+            },
+            limits: {
+              dailyAdWatches: 0, // no ads
+              pointsPerAd: 0,
+              maxPointsBalance: 0
+            },
+            description: 'Premium features with 10 daily uploads and 5-minute file limit'
   }
 };
 

@@ -26,6 +26,14 @@ export interface IUser extends Document {
             dailyLiveRecordingMinutes: number;
             monthlyLiveRecordingMinutes: number;
             totalLiveRecordingMinutes: number;
+            // Real-time streaming tracking
+            dailyRealTimeStreamingMinutes: number;
+            monthlyRealTimeStreamingMinutes: number;
+            totalRealTimeStreamingMinutes: number;
+            // Translation tracking
+            dailyTranslationMinutes: number;
+            monthlyTranslationMinutes: number;
+            totalTranslationMinutes: number;
   };
   pointsBalance: number;
   pointsHistory: Array<{
@@ -83,7 +91,15 @@ const UserSchema = new Schema<IUser>({
             // Live recording tracking
             dailyLiveRecordingMinutes: { type: Number, default: 0 },
             monthlyLiveRecordingMinutes: { type: Number, default: 0 },
-            totalLiveRecordingMinutes: { type: Number, default: 0 }
+            totalLiveRecordingMinutes: { type: Number, default: 0 },
+            // Real-time streaming tracking
+            dailyRealTimeStreamingMinutes: { type: Number, default: 0 },
+            monthlyRealTimeStreamingMinutes: { type: Number, default: 0 },
+            totalRealTimeStreamingMinutes: { type: Number, default: 0 },
+            // Translation tracking
+            dailyTranslationMinutes: { type: Number, default: 0 },
+            monthlyTranslationMinutes: { type: Number, default: 0 },
+            totalTranslationMinutes: { type: Number, default: 0 }
   },
   pointsBalance: { type: Number, default: 0 },
   pointsHistory: [{

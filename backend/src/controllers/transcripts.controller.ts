@@ -3,7 +3,6 @@ import { GcpSttService } from '../services/gcp-stt.service';
 import { transcriptsRepo } from '../repositories/transcripts.repository';
 import { Transcript } from '../types/domain';
 import { normalizeToLinear16Mono16k } from '../utils/audio';
-import { checkTranscriptionUsage, checkFileSizeLimit, recordUsage } from '../middleware/premium.guard';
 import { authenticate, AuthenticatedRequest } from '../middleware/mongodb-auth';
 import { UsageService } from '../services/usage.service';
 

@@ -2,19 +2,15 @@ import { Router } from 'express';
 import multer from 'multer';
 import { transcribeUpload, listTranscripts, getTranscript, deleteTranscript } from '../controllers/transcripts.controller';
 import { optionalAuth } from '../middleware/mongodb-auth';
-import { checkTranscriptionUsage, checkFileSizeLimit, recordUsage } from '../middleware/premium.guard';
 
 export const transcriptsRouter = Router();
 const upload = multer();
 
-// File upload for transcription with premium gating
+// File upload for transcription with source-specific limits handled in controller
 transcriptsRouter.post('/stt/transcribe', 
   optionalAuth,
   upload.single('audio'),
-  checkFileSizeLimit(),
-  checkTranscriptionUsage('file_upload'),
-  transcribeUpload,
-  recordUsage()
+  transcribeUpload
 );
 
 // MVP transcripts CRUD (list/get/delete)
