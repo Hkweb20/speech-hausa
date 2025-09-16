@@ -1263,7 +1263,11 @@ export class UsageService {
                   // Real-time streaming limits
                   dailyRealTimeStreamingMinutes: tier.features.dailyRealTimeStreamingMinutes,
                   // Translation limits
-                  dailyTranslationMinutes: tier.features.dailyTranslationMinutes
+                  dailyTranslationMinutes: tier.features.dailyTranslationMinutes,
+                  // AI features limits
+                  dailyAIRequests: tier.features.dailyAIRequests,
+                  monthlyAIRequests: tier.features.monthlyAIRequests,
+                  aiFeatures: tier.features.aiFeatures
                 }
       };
 

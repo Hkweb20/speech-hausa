@@ -747,6 +747,52 @@
             <span class="limit-value" id="realTimeStreamingSubscriptionTier">Free</span>
           </div>
         </div>
+
+        <!-- Translation Limits -->
+        <div class="upload-limits" id="translationLimits" style="display: none;">
+          <h4>🌍 Translation Limits</h4>
+          <div class="limit-item">
+            <span class="limit-label">Daily Minutes:</span>
+            <span class="limit-value" id="dailyTranslationMinutes">0/30</span>
+          </div>
+          <div class="limit-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="translationProgress" style="width: 0%"></div>
+            </div>
+            <div class="limit-text" id="translationLimitText">30 minutes remaining today</div>
+          </div>
+          <div class="limit-item">
+            <span class="limit-label">Subscription:</span>
+            <span class="limit-value" id="translationSubscriptionTier">Premium</span>
+          </div>
+        </div>
+
+        <!-- AI Features Limits -->
+        <div class="upload-limits" id="aiLimits" style="display: none;">
+          <h4>🤖 AI Features Limits</h4>
+          <div class="limit-item">
+            <span class="limit-label">Daily Requests:</span>
+            <span class="limit-value" id="dailyAIRequests">0/5</span>
+          </div>
+          <div class="limit-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="aiProgress" style="width: 0%"></div>
+            </div>
+            <div class="limit-text" id="aiLimitText">5 requests remaining today</div>
+          </div>
+          <div class="limit-item">
+            <span class="limit-label">Monthly Requests:</span>
+            <span class="limit-value" id="monthlyAIRequests">0/150</span>
+          </div>
+          <div class="limit-item">
+            <span class="limit-label">Available Features:</span>
+            <span class="limit-value" id="availableAIFeatures">Basic punctuation</span>
+          </div>
+          <div class="limit-item">
+            <span class="limit-label">Subscription:</span>
+            <span class="limit-value" id="aiSubscriptionTier">Free</span>
+          </div>
+        </div>
     </div>
 
     <!-- Main Content -->
@@ -770,6 +816,13 @@
           </div>
           <div class="result-area" id="uploadResult">
             <div class="transcript-text">Your transcription will appear here...</div>
+            
+            <!-- AI Features Warning -->
+            <div id="uploadAiLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
+              <strong>🤖 AI Features:</strong>
+              <div id="uploadAiLimitsText">Loading AI limits...</div>
+            </div>
+            
             <div class="ai-buttons" id="uploadAiButtons" style="display: none;">
               <button class="ai-btn" onclick="summarizeText('uploadResult')">📝 Summarize</button>
               <button class="ai-btn" onclick="formatText('uploadResult', 'facebook')">📘 Facebook</button>
@@ -800,6 +853,13 @@
           <audio id="playback" controls style="width: 100%; margin-bottom: 15px;"></audio>
           <div class="result-area" id="recordResult">
             <div class="transcript-text">Your live transcription will appear here...</div>
+            
+            <!-- AI Features Warning -->
+            <div id="recordAiLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
+              <strong>🤖 AI Features:</strong>
+              <div id="recordAiLimitsText">Loading AI limits...</div>
+            </div>
+            
             <div class="ai-buttons" id="recordAiButtons" style="display: none;">
               <button class="ai-btn" onclick="summarizeText('recordResult')">📝 Summarize</button>
               <button class="ai-btn" onclick="formatText('recordResult', 'facebook')">📘 Facebook</button>
@@ -852,6 +912,12 @@
               <div class="transcript-text" id="fullTranscript" style="background: #f0f9f4; padding: 15px; border-radius: 8px; border-left: 4px solid #27ae60; min-height: 120px; max-height: 300px; overflow-y: auto;">
                 Complete transcript will appear here...
               </div>
+              <!-- AI Features Warning -->
+              <div id="streamAiLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
+                <strong>🤖 AI Features:</strong>
+                <div id="streamAiLimitsText">Loading AI limits...</div>
+              </div>
+              
               <div class="ai-buttons" id="streamAiButtons" style="display: none; margin-top: 15px;">
                 <button class="ai-btn" onclick="summarizeText('streamResult')">📝 Summarize</button>
                 <button class="ai-btn" onclick="formatText('streamResult', 'facebook')">📘 Facebook</button>
@@ -869,6 +935,12 @@
         <div class="feature-card">
           <h3>🌍 Voice Translation</h3>
           <p>Translate Hausa speech to English, French, or Arabic with real-time voice output. Complete translation pipeline in one click!</p>
+          
+          <!-- Translation Limits Warning -->
+          <div id="translationLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
+            <strong>🌍 Translation Limits:</strong>
+            <div id="translationLimitsText">Loading limits...</div>
+          </div>
           
           <!-- Language Selection -->
           <div style="margin-bottom: 20px;">
@@ -1305,6 +1377,12 @@
           // Update real-time streaming limits
           updateRealTimeStreamingLimits(usage, limits, tier);
           
+          // Update translation limits
+          updateTranslationLimits(usage, limits, tier);
+          
+          // Update AI limits
+          updateAILimits(usage, limits, tier);
+          
           log('User stats loaded: ' + JSON.stringify(data.stats));
         }
       } catch (error) {
@@ -1457,6 +1535,113 @@
       updateRealTimeStreamingLimitsWarning(dailyRealTimeStreamingMinutes, maxDailyRealTimeStreamingMinutes, tier);
     }
 
+    // Update translation limits display
+    function updateTranslationLimits(usage, limits, tier) {
+      const dailyTranslationMinutes = usage.dailyTranslationMinutes || 0;
+      const maxDailyTranslationMinutes = limits.dailyTranslationMinutes || 0;
+      
+      // Show translation limits section
+      document.getElementById('translationLimits').style.display = 'block';
+      
+      document.getElementById('dailyTranslationMinutes').textContent = 
+        `${formatMinutes(dailyTranslationMinutes)}/${formatMinutes(maxDailyTranslationMinutes)}`;
+      document.getElementById('translationSubscriptionTier').textContent = tier;
+      
+      // Update progress bar
+      const progressElement = document.getElementById('translationProgress');
+      const progressText = document.getElementById('translationLimitText');
+      
+      if (maxDailyTranslationMinutes > 0) {
+        const percentage = (dailyTranslationMinutes / maxDailyTranslationMinutes) * 100;
+        progressElement.style.width = `${Math.min(percentage, 100)}%`;
+        
+        if (percentage >= 90) {
+          progressElement.className = 'progress-fill danger';
+        } else if (percentage >= 70) {
+          progressElement.className = 'progress-fill warning';
+        } else {
+          progressElement.className = 'progress-fill';
+        }
+        
+        const remaining = maxDailyTranslationMinutes - dailyTranslationMinutes;
+        progressText.textContent = `${formatMinutes(remaining)} remaining today`;
+      } else {
+        progressElement.style.width = '0%';
+        progressText.textContent = 'No translation access';
+      }
+      
+      // Update warning in translation section
+      updateTranslationLimitsWarning(dailyTranslationMinutes, maxDailyTranslationMinutes, tier);
+    }
+
+    // Update AI limits display
+    function updateAILimits(usage, limits, tier) {
+      const dailyAIRequests = usage.dailyAIRequests || 0;
+      const monthlyAIRequests = usage.monthlyAIRequests || 0;
+      const maxDailyAIRequests = limits.dailyAIRequests || 5;
+      const maxMonthlyAIRequests = limits.monthlyAIRequests || 150;
+      const aiFeatures = limits.aiFeatures || ['basic_punctuation'];
+      
+      // Show AI limits section
+      document.getElementById('aiLimits').style.display = 'block';
+      
+      document.getElementById('dailyAIRequests').textContent = 
+        `${dailyAIRequests}/${maxDailyAIRequests === -1 ? '∞' : maxDailyAIRequests}`;
+      document.getElementById('monthlyAIRequests').textContent = 
+        `${monthlyAIRequests}/${maxMonthlyAIRequests === -1 ? '∞' : maxMonthlyAIRequests}`;
+      document.getElementById('availableAIFeatures').textContent = aiFeatures.join(', ');
+      document.getElementById('aiSubscriptionTier').textContent = tier;
+      
+      // Update progress bar
+      const progressElement = document.getElementById('aiProgress');
+      const progressText = document.getElementById('aiLimitText');
+      
+      if (maxDailyAIRequests === 0) {
+        // No AI access
+        progressElement.style.width = '0%';
+        progressText.textContent = 'No AI access';
+      } else if (maxDailyAIRequests === -1) {
+        // Unlimited AI requests
+        progressElement.style.width = '0%';
+        progressText.textContent = 'Unlimited requests';
+      } else {
+        // Limited AI requests
+        const percentage = (dailyAIRequests / maxDailyAIRequests) * 100;
+        progressElement.style.width = `${Math.min(percentage, 100)}%`;
+        
+        if (percentage >= 90) {
+          progressElement.className = 'progress-fill danger';
+        } else if (percentage >= 70) {
+          progressElement.className = 'progress-fill warning';
+        } else {
+          progressElement.className = 'progress-fill';
+        }
+        
+        const remaining = maxDailyAIRequests - dailyAIRequests;
+        progressText.textContent = `${remaining} requests remaining today`;
+      }
+      
+      // Update warnings in all AI sections
+      updateAILimitsWarning('uploadAiLimitsWarning', 'uploadAiLimitsText', dailyAIRequests, maxDailyAIRequests, tier, aiFeatures);
+      updateAILimitsWarning('recordAiLimitsWarning', 'recordAiLimitsText', dailyAIRequests, maxDailyAIRequests, tier, aiFeatures);
+      
+      // Only show AI warning for streaming if there's actual content
+      const fullTranscriptElement = document.getElementById('fullTranscript');
+      const hasTranscriptContent = fullTranscriptElement && fullTranscriptElement.textContent.trim().length > 10;
+      if (hasTranscriptContent) {
+        updateAILimitsWarning('streamAiLimitsWarning', 'streamAiLimitsText', dailyAIRequests, maxDailyAIRequests, tier, aiFeatures);
+      } else {
+        const warningElement = document.getElementById('streamAiLimitsWarning');
+        if (warningElement) {
+          warningElement.style.display = 'none';
+        }
+      }
+      
+      // Update AI button availability based on features and limits
+      const remaining = maxDailyAIRequests === -1 ? 999999 : (maxDailyAIRequests - dailyAIRequests);
+      updateAIButtonAvailability(aiFeatures, remaining, maxDailyAIRequests);
+    }
+
     function updateRealTimeStreamingLimitsWarning(dailyRealTimeStreamingMinutes, maxDailyRealTimeStreamingMinutes, tier) {
       const warningElement = document.getElementById('realTimeStreamingLimitsWarning');
       const textElement = document.getElementById('realTimeStreamingLimitsText');
@@ -1480,6 +1665,99 @@
       warningElement.className = warningClass;
       textElement.textContent = warningText;
       warningElement.style.display = 'block';
+    }
+
+    function updateTranslationLimitsWarning(dailyTranslationMinutes, maxDailyTranslationMinutes, tier) {
+      const warningElement = document.getElementById('translationLimitsWarning');
+      const textElement = document.getElementById('translationLimitsText');
+      
+      if (!warningElement || !textElement) return;
+
+      if (maxDailyTranslationMinutes === 0) {
+        textElement.textContent = `Translation not available for ${tier} tier. Upgrade to Gold or Premium for translation features.`;
+        warningElement.className = 'usage-info error';
+        warningElement.style.display = 'block';
+        return;
+      }
+
+      const remaining = maxDailyTranslationMinutes - dailyTranslationMinutes;
+      let warningText = '';
+      let warningClass = 'usage-info';
+
+      if (remaining <= 0) {
+        warningText = `❌ No translation time remaining today (${formatMinutes(dailyTranslationMinutes)}/${formatMinutes(maxDailyTranslationMinutes)} used).`;
+        warningClass = 'usage-info error';
+      } else if (remaining <= maxDailyTranslationMinutes * 0.1) {
+        warningText = `⚠️ Translation time almost used up: ${formatMinutes(remaining)} remaining today.`;
+        warningClass = 'usage-info warning';
+      } else {
+        warningText = `✅ ${formatMinutes(remaining)} translation time remaining today.`;
+        warningClass = 'usage-info success';
+      }
+
+      warningElement.className = warningClass;
+      textElement.textContent = warningText;
+      warningElement.style.display = 'block';
+    }
+
+    function updateAILimitsWarning(warningElementId, textElementId, dailyAIRequests, maxDailyAIRequests, tier, aiFeatures) {
+      const warningElement = document.getElementById(warningElementId);
+      const textElement = document.getElementById(textElementId);
+      
+      if (!warningElement || !textElement) return;
+
+      let warningText = '';
+      let warningClass = 'usage-info';
+
+      if (maxDailyAIRequests === 0) {
+        warningText = `AI features not available for ${tier} tier. Upgrade to Basic or higher for AI features.`;
+        warningClass = 'usage-info error';
+      } else if (maxDailyAIRequests === -1) {
+        // Unlimited AI requests
+        warningText = `✅ Unlimited AI requests available. Available features: ${aiFeatures.join(', ')}`;
+        warningClass = 'usage-info success';
+      } else {
+        // Limited AI requests
+        const remaining = maxDailyAIRequests - dailyAIRequests;
+        if (remaining <= 0) {
+          warningText = `❌ No AI requests remaining today (${dailyAIRequests}/${maxDailyAIRequests} used). Available features: ${aiFeatures.join(', ')}`;
+          warningClass = 'usage-info error';
+        } else if (remaining <= 2) {
+          warningText = `⚠️ AI requests almost used up: ${remaining} remaining today. Available features: ${aiFeatures.join(', ')}`;
+          warningClass = 'usage-info warning';
+        } else {
+          warningText = `✅ ${remaining} AI requests remaining today. Available features: ${aiFeatures.join(', ')}`;
+          warningClass = 'usage-info success';
+        }
+      }
+
+      warningElement.className = warningClass;
+      textElement.textContent = warningText;
+      warningElement.style.display = 'block';
+    }
+
+    function updateAIButtonAvailability(aiFeatures, remainingRequests, maxDailyAIRequests) {
+      const aiButtonSections = ['uploadAiButtons', 'recordAiButtons', 'streamAiButtons'];
+      
+      aiButtonSections.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        
+        const buttons = section.querySelectorAll('.ai-btn');
+        buttons.forEach(button => {
+          // Disable buttons only if no AI access (maxDailyAIRequests === 0) or if limited and no requests remaining
+          const isDisabled = maxDailyAIRequests === 0 || (maxDailyAIRequests > 0 && remainingRequests <= 0);
+          button.disabled = isDisabled;
+          
+          if (isDisabled) {
+            button.style.opacity = '0.5';
+            button.style.cursor = 'not-allowed';
+          } else {
+            button.style.opacity = '1';
+            button.style.cursor = 'pointer';
+          }
+        });
+      });
     }
 
     function updateUploadLimitsWarning(dailyUploads, maxDailyUploads, maxFileDuration, tier) {
@@ -1930,6 +2208,12 @@
       document.getElementById('fullTranscript').textContent = 'Complete transcript will appear here...';
       document.getElementById('currentTranscript').textContent = 'Current speech will appear here...';
       
+      // Hide AI warning initially
+      const warningElement = document.getElementById('streamAiLimitsWarning');
+      if (warningElement) {
+        warningElement.style.display = 'none';
+      }
+      
       // Pass premium and user ID via query string for server gating and user tracking
       const userIdParam = currentUser?.id ? `&userId=${currentUser.id}` : '';
       liveSocket = io(`/transcription?premium=${isPremium}${userIdParam}`);
@@ -1947,6 +2231,15 @@
         
         if (msg.status === 'completed') {
           // Session completed - refresh user stats to update limits
+          if (authToken) {
+            loadUserStats();
+          }
+        } else if (msg.status === 'limit_exceeded') {
+          // Handle limit exceeded - stop recording and show message
+          log('[live] Real-time streaming limit exceeded - stopping session');
+          endSession();
+          showError('Daily real-time streaming limit reached. Session ended.', 'liveResult');
+          // Refresh user stats to show updated limits
           if (authToken) {
             loadUserStats();
           }
@@ -1971,6 +2264,19 @@
           // Show AI buttons when we have a complete transcript
           if (fullTranscript.trim().length > 10) {
             showAiButtons('streamResult');
+            // Show AI limits warning only when there's content
+            updateAILimitsWarning('streamAiLimitsWarning', 'streamAiLimitsText', 
+              currentUser ? currentUser.usageStats?.dailyAIRequests || 0 : 0,
+              currentUser ? currentUser.subscriptionTier === 'premium' ? -1 : 5 : 5,
+              currentUser ? currentUser.subscriptionTier : 'free',
+              currentUser ? ['basic_punctuation', 'auto_capitalization', 'unlimited_summary', 'translation', 'speaker_diarization', 'keywords_extraction', 'sentiment_analysis', 'batch_processing', 'custom_vocabulary'] : ['basic_punctuation']
+            );
+          } else {
+            // Hide AI warning when no content
+            const warningElement = document.getElementById('streamAiLimitsWarning');
+            if (warningElement) {
+              warningElement.style.display = 'none';
+            }
           }
         } else {
           // Partial text - show in current only
@@ -2025,6 +2331,12 @@
       currentPartial = '';
       document.getElementById('fullTranscript').textContent = 'Complete transcript will appear here...';
       document.getElementById('currentTranscript').textContent = 'Current speech will appear here...';
+      
+      // Hide AI warning
+      const warningElement = document.getElementById('streamAiLimitsWarning');
+      if (warningElement) {
+        warningElement.style.display = 'none';
+      }
     }
 
     async function startMicStream() {
@@ -2232,6 +2544,11 @@
           document.getElementById('summarizeResult').textContent = data.summary;
           document.getElementById('summarizeModal').classList.add('active');
           log('Text summarized successfully');
+          
+          // Refresh user stats to update AI usage
+          if (authToken) {
+            loadUserStats();
+          }
         } else {
           showError(data.error || 'Failed to summarize text', resultAreaId);
           log('Summarize error: ' + (data.error || 'Unknown error'));
@@ -2271,6 +2588,11 @@
           document.getElementById('formatResult').textContent = data.formattedText;
           document.getElementById('formatModal').classList.add('active');
           log(`Text formatted for ${platform} successfully`);
+          
+          // Refresh user stats to update AI usage
+          if (authToken) {
+            loadUserStats();
+          }
         } else {
           showError(data.error || 'Failed to format text', resultAreaId);
           log('Format error: ' + (data.error || 'Unknown error'));
@@ -2317,6 +2639,11 @@
           
           document.getElementById('formatAllModal').classList.add('active');
           log('Text formatted for all platforms successfully');
+          
+          // Refresh user stats to update AI usage
+          if (authToken) {
+            loadUserStats();
+          }
         } else {
           showError(data.error || 'Failed to format text', resultAreaId);
           log('Format all error: ' + (data.error || 'Unknown error'));

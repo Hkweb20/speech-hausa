@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Hausa Speech-to-Text</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #34495e;
+            margin-bottom: 20px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar li {
+            margin-bottom: 5px;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 12px 20px;
+            color: #ecf0f1;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: #34495e;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            width: calc(100% - 250px);
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .login-form {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-success {
+            background: #27ae60;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .form-row input {
+            flex: 1;
+        }
+
+        .tier-form {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .tier-form h4 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .permission-badge {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .role-super_admin {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .role-admin {
+            background: #f39c12;
+            color: white;
+        }
+
+        .role-moderator {
+            background: #95a5a6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Form -->
+    <div id="loginSection" class="login-form">
+        <h2>Admin Login</h2>
+        <form id="adminLoginForm">
+            <div class="form-group">
+                <label for="adminEmail">Email</label>
+                <input type="email" id="adminEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="adminPassword">Password</label>
+                <input type="password" id="adminPassword" required>
+            </div>
+            <button type="submit" class="btn">Login</button>
+        </form>
+        <div id="loginError" class="error hidden"></div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="admin-container hidden">
+        <div class="sidebar">
+            <h2>Admin Panel</h2>
+            <ul>
+                <li><a href="#" onclick="showSection('dashboard')" class="nav-link active">Dashboard</a></li>
+                <li><a href="#" onclick="showSection('users')" class="nav-link">Users</a></li>
+                <li><a href="#" onclick="showSection('limits')" class="nav-link">Limits</a></li>
+                <li><a href="#" onclick="showSection('analytics')" class="nav-link">Analytics</a></li>
+                <li><a href="#" onclick="showSection('logs')" class="nav-link">Audit Logs</a></li>
+                <li><a href="#" onclick="logout()" class="nav-link">Logout</a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboardSection" class="content-section">
+                <div class="header">
+                    <h1>Dashboard</h1>
+                    <div>
+                        <span id="adminInfo"></span>
+                        <button onclick="logout()" class="btn btn-danger">Logout</button>
+                    </div>
+                </div>
+                <div id="dashboardStats" class="stats-grid">
+                    <!-- Stats will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="usersSection" class="content-section hidden">
+                <div class="header">
+                    <h1>User Management</h1>
+                    <div>
+                        <input type="text" id="userSearch" placeholder="Search users..." style="padding: 8px; margin-right: 10px;">
+                        <button onclick="loadUsers()" class="btn">Search</button>
+                    </div>
+                </div>
+                <div id="usersTable">
+                    <!-- Users table will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Limits Section -->
+            <div id="limitsSection" class="content-section hidden">
+                <div class="header">
+                    <h1>Subscription Limits</h1>
+                    <button onclick="loadSubscriptionTiers()" class="btn">Refresh</button>
+                </div>
+                <div id="limitsContent">
+                    <!-- Limits will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div id="analyticsSection" class="content-section hidden">
+                <div class="header">
+                    <h1>Analytics & Reports</h1>
+                    <div>
+                        <button onclick="loadSystemStats()" class="btn">Refresh Stats</button>
+                        <button onclick="exportReport()" class="btn btn-success">Export Report</button>
+                    </div>
+                </div>
+                <div id="analyticsContent">
+                    <!-- Analytics will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Logs Section -->
+            <div id="logsSection" class="content-section hidden">
+                <div class="header">
+                    <h1>Audit Logs</h1>
+                    <button onclick="loadAdminLogs()" class="btn">Refresh</button>
+                </div>
+                <div id="logsContent">
+                    <!-- Logs will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let adminToken = null;
+        let currentAdmin = null;
+
+        // Load saved admin token
+        function loadAdminState() {
+            const savedToken = localStorage.getItem('adminToken');
+            const savedAdmin = localStorage.getItem('adminUser');
+            
+            if (savedToken && savedAdmin) {
+                adminToken = savedToken;
+                currentAdmin = JSON.parse(savedAdmin);
+                showAdminPanel();
+            }
+        }
+
+        // Save admin state
+        function saveAdminState() {
+            if (adminToken && currentAdmin) {
+                localStorage.setItem('adminToken', adminToken);
+                localStorage.setItem('adminUser', JSON.stringify(currentAdmin));
+            }
+        }
+
+        // Clear admin state
+        function clearAdminState() {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            adminToken = null;
+            currentAdmin = null;
+        }
+
+        // Show error message
+        function showError(message, elementId) {
+            const errorEl = document.getElementById(elementId);
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+            setTimeout(() => {
+                errorEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successEl = document.createElement('div');
+            successEl.className = 'success';
+            successEl.textContent = message;
+            document.querySelector('.main-content').insertBefore(successEl, document.querySelector('.content-section'));
+            setTimeout(() => {
+                successEl.remove();
+            }, 3000);
+        }
+
+        // Admin login
+        async function adminLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+
+            try {
+                const response = await fetch('/api/admin/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    adminToken = data.token;
+                    currentAdmin = data.admin;
+                    saveAdminState();
+                    showAdminPanel();
+                } else {
+                    showError(data.error || 'Login failed', 'loginError');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message, 'loginError');
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                if (adminToken) {
+                    await fetch('/api/admin/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${adminToken}` }
+                    });
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                clearAdminState();
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.add('hidden');
+            }
+        }
+
+        // Show admin panel
+        function showAdminPanel() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('adminPanel').classList.remove('hidden');
+            document.getElementById('adminInfo').textContent = `Welcome, ${currentAdmin.name} (${currentAdmin.role})`;
+            loadDashboard();
+        }
+
+        // Show section
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName + 'Section').classList.remove('hidden');
+            event.target.classList.add('active');
+            
+            // Load section data
+            switch(sectionName) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'limits':
+                    loadSubscriptionTiers();
+                    break;
+                case 'analytics':
+                    loadSystemStats();
+                    break;
+                case 'logs':
+                    loadAdminLogs();
+                    break;
+            }
+        }
+
+        // Load dashboard
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/admin/analytics/system-stats', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.stats;
+                    document.getElementById('dashboardStats').innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.totalUsers}</div>
+                            <div class="stat-label">Total Users</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.activeUsers}</div>
+                            <div class="stat-label">Active Users (30 days)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${Math.round(stats.usageStats.totalMinutes)}</div>
+                            <div class="stat-label">Total Minutes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.usageStats.totalFileUploads}</div>
+                            <div class="stat-label">File Uploads</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.usageStats.totalAIRequests}</div>
+                            <div class="stat-label">AI Requests</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.usageStats.totalPoints}</div>
+                            <div class="stat-label">Total Points</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            const search = document.getElementById('userSearch').value;
+            const query = search ? `?search=${encodeURIComponent(search)}` : '';
+            
+            try {
+                const response = await fetch(`/api/admin/users${query}`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let tableHTML = `
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Tier</th>
+                                    <th>Created</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.users.forEach(user => {
+                        tableHTML += `
+                            <tr>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td><span class="role-badge role-${user.subscriptionTier}">${user.subscriptionTier}</span></td>
+                                <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                                <td>${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</td>
+                                <td>
+                                    <button onclick="viewUser('${user._id}')" class="btn">View</button>
+                                    <button onclick="resetUserDaily('${user._id}')" class="btn btn-warning">Reset Daily</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    document.getElementById('usersTable').innerHTML = tableHTML;
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Load subscription tiers
+        async function loadSubscriptionTiers() {
+            try {
+                const response = await fetch('/api/admin/limits/subscription-tiers', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let contentHTML = '';
+                    
+                    Object.entries(data.tiers).forEach(([tierName, tier]) => {
+                        contentHTML += `
+                            <div class="tier-form">
+                                <h4>${tier.name} (${tierName})</h4>
+                                <div class="form-row">
+                                    <input type="number" id="${tierName}_dailyFileUploads" value="${tier.features.dailyFileUploads}" placeholder="Daily File Uploads">
+                                    <input type="number" id="${tierName}_maxFileDuration" value="${tier.features.maxFileDuration}" placeholder="Max File Duration (min)">
+                                </div>
+                                <div class="form-row">
+                                    <input type="number" id="${tierName}_dailyLiveRecordingMinutes" value="${tier.features.dailyLiveRecordingMinutes}" placeholder="Daily Live Recording (min)">
+                                    <input type="number" id="${tierName}_dailyRealTimeStreamingMinutes" value="${tier.features.dailyRealTimeStreamingMinutes}" placeholder="Daily Real-time Streaming (min)">
+                                </div>
+                                <div class="form-row">
+                                    <input type="number" id="${tierName}_dailyTranslationMinutes" value="${tier.features.dailyTranslationMinutes}" placeholder="Daily Translation (min)">
+                                    <input type="number" id="${tierName}_dailyAIRequests" value="${tier.features.dailyAIRequests}" placeholder="Daily AI Requests">
+                                </div>
+                                <button onclick="updateTier('${tierName}')" class="btn">Update ${tier.name}</button>
+                            </div>
+                        `;
+                    });
+                    
+                    document.getElementById('limitsContent').innerHTML = contentHTML;
+                }
+            } catch (error) {
+                console.error('Error loading subscription tiers:', error);
+            }
+        }
+
+        // Update tier
+        async function updateTier(tierName) {
+            const updates = {
+                features: {
+                    dailyFileUploads: parseInt(document.getElementById(`${tierName}_dailyFileUploads`).value),
+                    maxFileDuration: parseInt(document.getElementById(`${tierName}_maxFileDuration`).value),
+                    dailyLiveRecordingMinutes: parseInt(document.getElementById(`${tierName}_dailyLiveRecordingMinutes`).value),
+                    dailyRealTimeStreamingMinutes: parseInt(document.getElementById(`${tierName}_dailyRealTimeStreamingMinutes`).value),
+                    dailyTranslationMinutes: parseInt(document.getElementById(`${tierName}_dailyTranslationMinutes`).value),
+                    dailyAIRequests: parseInt(document.getElementById(`${tierName}_dailyAIRequests`).value)
+                }
+            };
+
+            try {
+                const response = await fetch(`/api/admin/limits/subscription-tiers/${tierName}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updates)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`${tierName} tier updated successfully`);
+                } else {
+                    showError(data.error || 'Failed to update tier');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Load system stats
+        async function loadSystemStats() {
+            try {
+                const response = await fetch('/api/admin/analytics/system-stats', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.stats;
+                    document.getElementById('analyticsContent').innerHTML = `
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value">${stats.totalUsers}</div>
+                                <div class="stat-label">Total Users</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${stats.activeUsers}</div>
+                                <div class="stat-label">Active Users</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${Math.round(stats.usageStats.totalMinutes)}</div>
+                                <div class="stat-label">Total Minutes</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${stats.usageStats.totalFileUploads}</div>
+                                <div class="stat-label">File Uploads</div>
+                            </div>
+                        </div>
+                        <h3>Tier Distribution</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Tier</th>
+                                    <th>Users</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${stats.tierDistribution.map(tier => `
+                                    <tr>
+                                        <td>${tier._id}</td>
+                                        <td>${tier.count}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading system stats:', error);
+            }
+        }
+
+        // Load admin logs
+        async function loadAdminLogs() {
+            try {
+                const response = await fetch('/api/admin/analytics/logs', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let tableHTML = `
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Admin</th>
+                                    <th>Action</th>
+                                    <th>Resource</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.logs.forEach(log => {
+                        tableHTML += `
+                            <tr>
+                                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                                <td>${log.adminEmail}</td>
+                                <td>${log.action}</td>
+                                <td>${log.resource}</td>
+                                <td>${JSON.stringify(log.details).substring(0, 100)}...</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    document.getElementById('logsContent').innerHTML = tableHTML;
+                }
+            } catch (error) {
+                console.error('Error loading admin logs:', error);
+            }
+        }
+
+        // Reset user daily limits
+        async function resetUserDaily(userId) {
+            if (!confirm('Are you sure you want to reset this user\'s daily limits?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/reset-daily`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('User daily limits reset successfully');
+                    loadUsers();
+                } else {
+                    showError(data.error || 'Failed to reset user limits');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Export report
+        async function exportReport() {
+            try {
+                const response = await fetch('/api/admin/analytics/usage-report?format=csv', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `usage-report-${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    showError('Failed to export report');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAdminState();
+            document.getElementById('adminLoginForm').addEventListener('submit', adminLogin);
+        });
+    </script>
+</body>
+</html>
