@@ -1,5 +1,5 @@
 import { User, IUser } from '../models/User';
-import { SUBSCRIPTION_TIERS } from '../config/subscription';
+import { subscriptionTiersService } from './subscription-tiers.service';
 import { logger } from '../config/logger';
 
 export interface UsageCheckResult {
@@ -56,10 +56,22 @@ export class UsageService {
    * Get effective limits for a user (tier limits or custom limits if set)
    */
   private getEffectiveLimits(user: IUser) {
-    const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+    const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+    
+    // Debug logging
+    logger.info({ 
+      subscriptionTier: user.subscriptionTier, 
+      tierDailyFileUploads: tier?.features?.dailyFileUploads 
+    }, 'getEffectiveLimits debug');
+    
+    if (!tier) {
+      logger.warn({ subscriptionTier: user.subscriptionTier }, 'Unknown subscription tier, falling back to free tier');
+      const freeTier = subscriptionTiersService.getTier('free');
+      return freeTier?.features || {};
+    }
     
     // If user has custom limits, use those; otherwise use tier limits
-    if (user.customLimits) {
+    if (user.customLimits && user.customLimits.dailyFileUploads !== undefined) {
       return {
         dailyMinutes: user.customLimits.dailyMinutes ?? tier.features.dailyMinutes,
         monthlyMinutes: user.customLimits.monthlyMinutes ?? tier.features.monthlyMinutes,
@@ -101,7 +113,16 @@ export class UsageService {
         };
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        return {
+          allowed: false,
+          remainingMinutes: 0,
+          tier: 'free',
+          reason: 'Invalid subscription tier'
+        };
+      }
+      
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -201,7 +222,18 @@ export class UsageService {
         };
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for file upload check');
+        return {
+          allowed: false,
+          remainingUploads: 0,
+          maxFileDuration: 0,
+          tier: 'free',
+          reason: 'Invalid subscription tier'
+        };
+      }
+      
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -333,7 +365,17 @@ export class UsageService {
         };
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for live recording check');
+        return {
+          allowed: false,
+          remainingMinutes: 0,
+          tier: 'free',
+          reason: 'Invalid subscription tier'
+        };
+      }
+      
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -468,7 +510,17 @@ export class UsageService {
         };
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for real-time streaming check');
+        return {
+          allowed: false,
+          remainingMinutes: 0,
+          tier: 'free',
+          reason: 'Invalid subscription tier'
+        };
+      }
+      
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -747,7 +799,17 @@ export class UsageService {
         };
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for translation check');
+        return {
+          allowed: false,
+          remainingMinutes: 0,
+          tier: 'free',
+          reason: 'Invalid subscription tier'
+        };
+      }
+      
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -1183,7 +1245,15 @@ export class UsageService {
         };
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for ad points check');
+        return {
+          success: false,
+          newBalance: user.pointsBalance,
+          reason: 'Invalid subscription tier'
+        };
+      }
       
       // Check daily ad watch limit
       const today = new Date();
@@ -1272,7 +1342,50 @@ export class UsageService {
         return null;
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for user stats');
+        // Fall back to free tier
+        const freeTier = subscriptionTiersService.getTier('free');
+        if (!freeTier) {
+          return null;
+        }
+        const effectiveLimits = {
+          dailyMinutes: freeTier.features.dailyMinutes,
+          monthlyMinutes: freeTier.features.monthlyMinutes,
+          dailyFileUploads: freeTier.features.dailyFileUploads,
+          maxFileDuration: freeTier.features.maxFileDuration,
+          dailyLiveRecordingMinutes: freeTier.features.dailyLiveRecordingMinutes,
+          dailyRealTimeStreamingMinutes: freeTier.features.dailyRealTimeStreamingMinutes,
+          dailyTranslationMinutes: freeTier.features.dailyTranslationMinutes,
+          dailyAIRequests: freeTier.features.dailyAIRequests,
+          monthlyAIRequests: freeTier.features.monthlyAIRequests,
+          aiFeatures: freeTier.features.aiFeatures
+        };
+        
+        return {
+          usage: user.usageStats,
+          points: user.pointsBalance,
+          tier: 'free',
+          limits: {
+            dailyMinutes: effectiveLimits.dailyMinutes,
+            monthlyMinutes: effectiveLimits.monthlyMinutes,
+            maxFileSize: freeTier.features.maxFileSize,
+            maxTranscripts: freeTier.features.maxTranscripts,
+            dailyAdWatches: freeTier.limits.dailyAdWatches,
+            maxPointsBalance: freeTier.limits.maxPointsBalance,
+            dailyFileUploads: effectiveLimits.dailyFileUploads,
+            maxFileDuration: effectiveLimits.maxFileDuration,
+            dailyLiveRecordingMinutes: effectiveLimits.dailyLiveRecordingMinutes,
+            dailyRealTimeStreamingMinutes: effectiveLimits.dailyRealTimeStreamingMinutes,
+            dailyTranslationMinutes: effectiveLimits.dailyTranslationMinutes,
+            dailyAIRequests: effectiveLimits.dailyAIRequests,
+            monthlyAIRequests: effectiveLimits.monthlyAIRequests,
+            aiFeatures: effectiveLimits.aiFeatures
+          }
+        };
+      }
+      
       const effectiveLimits = this.getEffectiveLimits(user);
       
       return {
@@ -1323,7 +1436,17 @@ export class UsageService {
         };
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for AI usage check');
+        return {
+          allowed: false,
+          remainingRequests: 0,
+          tier: 'free',
+          reason: 'Invalid subscription tier'
+        };
+      }
+      
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -1455,7 +1578,19 @@ export class UsageService {
         };
       }
 
-      const tier = SUBSCRIPTION_TIERS[user.subscriptionTier];
+      const tier = subscriptionTiersService.getTier(user.subscriptionTier);
+      if (!tier) {
+        logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for AI usage stats');
+        return {
+          dailyRequests: 0,
+          monthlyRequests: 0,
+          totalRequests: 0,
+          remainingRequests: 5,
+          tier: 'free',
+          resetTime: null
+        };
+      }
+      
       const dailyLimit = tier.features.dailyAIRequests || 5;
       const monthlyLimit = tier.features.monthlyAIRequests || 150;
 

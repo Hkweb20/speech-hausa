@@ -58,7 +58,7 @@ export async function adminLogin(req: Request, res: Response) {
 
     // Log admin login
     await AdminLog.create({
-      adminId: admin._id.toString(),
+      adminId: (admin._id as any).toString(),
       adminEmail: admin.email,
       action: 'login',
       resource: 'admin',

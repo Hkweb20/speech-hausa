@@ -24,7 +24,11 @@ exports.SUBSCRIPTION_TIERS = {
             dailyFileUploads: 2, // 2 file uploads per day
             maxFileDuration: 3, // 3 minutes max per file
             // Live recording limits
-            dailyLiveRecordingMinutes: 5 // 5 minutes of live recording per day
+            dailyLiveRecordingMinutes: 5, // 5 minutes of live recording per day
+            // Real-time streaming limits
+            dailyRealTimeStreamingMinutes: 3, // 3 minutes of real-time streaming per day
+            // Translation limits
+            dailyTranslationMinutes: 0 // No translation access for free users
         },
         limits: {
             dailyAdWatches: 5, // 5 ads per day = 50 points
@@ -55,7 +59,11 @@ exports.SUBSCRIPTION_TIERS = {
             dailyFileUploads: 5, // 5 file uploads per day
             maxFileDuration: 10, // 10 minutes max per file
             // Live recording limits
-            dailyLiveRecordingMinutes: 10 // 10 minutes of live recording per day
+            dailyLiveRecordingMinutes: 10, // 10 minutes of live recording per day
+            // Real-time streaming limits
+            dailyRealTimeStreamingMinutes: 3, // 3 minutes of real-time streaming per day
+            // Translation limits
+            dailyTranslationMinutes: 0 // No translation access for basic users
         },
         limits: {
             dailyAdWatches: 0, // no ads
@@ -93,7 +101,11 @@ exports.SUBSCRIPTION_TIERS = {
             dailyFileUploads: 20, // 20 file uploads per day
             maxFileDuration: 60, // 60 minutes max per file
             // Live recording limits
-            dailyLiveRecordingMinutes: 60 // 60 minutes of live recording per day
+            dailyLiveRecordingMinutes: 60, // 60 minutes of live recording per day
+            // Real-time streaming limits
+            dailyRealTimeStreamingMinutes: 10, // 10 minutes of real-time streaming per day
+            // Translation limits
+            dailyTranslationMinutes: 15 // 15 minutes of translation per day for Gold users
         },
         limits: {
             dailyAdWatches: 0, // no ads
@@ -134,7 +146,11 @@ exports.SUBSCRIPTION_TIERS = {
             dailyFileUploads: 10, // 10 file uploads per day
             maxFileDuration: 5, // 5 minutes max per file
             // Live recording limits - Premium gets 30 minutes per day
-            dailyLiveRecordingMinutes: 30 // 30 minutes of live recording per day
+            dailyLiveRecordingMinutes: 30, // 30 minutes of live recording per day
+            // Real-time streaming limits - Premium gets 10 minutes per day
+            dailyRealTimeStreamingMinutes: 10, // 10 minutes of real-time streaming per day
+            // Translation limits - Premium gets 30 minutes per day
+            dailyTranslationMinutes: 30 // 30 minutes of translation per day for Premium users
         },
         limits: {
             dailyAdWatches: 0, // no ads

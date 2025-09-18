@@ -1,10 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.endSessionSchema = exports.audioChunkSchema = exports.joinSessionSchema = void 0;
+exports.updateLanguagesSchema = exports.endSessionSchema = exports.audioChunkSchema = exports.joinSessionSchema = void 0;
 const zod_1 = require("zod");
 exports.joinSessionSchema = zod_1.z.object({
     sessionId: zod_1.z.string().min(1).optional(),
     mode: zod_1.z.enum(['online', 'offline']).default('online'),
+    userId: zod_1.z.string().optional(),
+    sourceLanguage: zod_1.z.string().optional(),
+    targetLanguage: zod_1.z.string().optional(),
 });
 exports.audioChunkSchema = zod_1.z.object({
     sessionId: zod_1.z.string().min(1),
@@ -13,4 +16,8 @@ exports.audioChunkSchema = zod_1.z.object({
 });
 exports.endSessionSchema = zod_1.z.object({
     sessionId: zod_1.z.string().min(1),
+});
+exports.updateLanguagesSchema = zod_1.z.object({
+    sourceLanguage: zod_1.z.string().min(1),
+    targetLanguage: zod_1.z.string().min(1),
 });

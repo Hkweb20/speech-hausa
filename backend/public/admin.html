@@ -329,6 +329,84 @@
         .close-btn:hover {
             color: #333;
         }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-running {
+            background-color: #27ae60;
+            animation: pulse 2s infinite;
+        }
+
+        .status-stopped {
+            background-color: #e74c3c;
+        }
+
+        .status-unknown {
+            background-color: #95a5a6;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .countdown-timer {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            background: #ecf0f1;
+            padding: 10px 15px;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+
+        .reset-info-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .reset-info-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .reset-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .reset-stat {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+
+        .reset-stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .reset-stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -357,6 +435,7 @@
                 <li><a href="#" onclick="showSection('dashboard')" class="nav-link active">Dashboard</a></li>
                 <li><a href="#" onclick="showSection('users')" class="nav-link">Users</a></li>
                 <li><a href="#" onclick="showSection('limits')" class="nav-link">Limits</a></li>
+                <li><a href="#" onclick="showSection('dailyReset')" class="nav-link">Daily Reset</a></li>
                 <li><a href="#" onclick="showSection('languages')" class="nav-link">Languages</a></li>
                 <li><a href="#" onclick="showSection('analytics')" class="nav-link">Analytics</a></li>
                 <li><a href="#" onclick="showSection('logs')" class="nav-link">Audit Logs</a></li>
@@ -403,6 +482,20 @@
                 </div>
                 <div id="limitsContent">
                     <!-- Limits will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Daily Reset Section -->
+            <div id="dailyResetSection" class="content-section hidden">
+                <div class="header">
+                    <h1>Daily Reset Management</h1>
+                    <div>
+                        <button onclick="loadDailyResetStatus()" class="btn">Refresh Status</button>
+                        <button onclick="triggerManualReset()" class="btn btn-warning">Manual Reset Now</button>
+                    </div>
+                </div>
+                <div id="dailyResetContent">
+                    <!-- Daily reset status will be loaded here -->
                 </div>
             </div>
 
@@ -672,6 +765,9 @@
                     break;
                 case 'limits':
                     loadSubscriptionTiers();
+                    break;
+                case 'dailyReset':
+                    loadDailyResetStatus();
                     break;
                 case 'languages':
                     loadLanguages();
@@ -1051,6 +1147,7 @@
                             <label>User:</label>
                             <p><strong>${user.name}</strong> (${user.email})</p>
                             <p>Current Tier: <span class="role-badge role-${user.subscriptionTier}">${user.subscriptionTier}</span></p>
+                            <p>Custom Limits: ${user.customLimits ? '<span style="color: #e74c3c; font-weight: bold;">ACTIVE</span>' : '<span style="color: #27ae60;">None (using tier defaults)</span>'}</p>
                         </div>
                         <div class="form-group">
                             <label>New Subscription Tier:</label>
@@ -1075,9 +1172,21 @@
                             <input type="date" id="newSubscriptionExpiresAt" value="${user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt).toISOString().split('T')[0] : ''}">
                         </div>
                         <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="useCustomLimits"> Use Custom Limits (override tier defaults)
-                            </label>
+                            <label>Custom Limits Options:</label>
+                            <div style="margin-left: 20px;">
+                                <label>
+                                    <input type="radio" name="customLimitsOption" value="clear" checked> 
+                                    <strong>Clear Custom Limits</strong> - Use new tier's default limits
+                                </label><br>
+                                <label>
+                                    <input type="radio" name="customLimitsOption" value="keep"> 
+                                    <strong>Keep Existing Custom Limits</strong> - Maintain current custom limits
+                                </label><br>
+                                <label>
+                                    <input type="radio" name="customLimitsOption" value="set"> 
+                                    <strong>Set New Custom Limits</strong> - Override with new custom limits
+                                </label>
+                            </div>
                         </div>
                         <div id="customLimitsSection" style="display: none;">
                             <h4>Custom Limits</h4>
@@ -1125,10 +1234,12 @@
                         <button onclick="performUpgrade('${userId}')" class="btn btn-success">Upgrade User</button>
                     `;
                     
-                    // Show/hide custom limits section
-                    document.getElementById('useCustomLimits').addEventListener('change', function() {
-                        const customSection = document.getElementById('customLimitsSection');
-                        customSection.style.display = this.checked ? 'block' : 'none';
+                    // Show/hide custom limits section based on radio selection
+                    document.querySelectorAll('input[name="customLimitsOption"]').forEach(radio => {
+                        radio.addEventListener('change', function() {
+                            const customSection = document.getElementById('customLimitsSection');
+                            customSection.style.display = this.value === 'set' ? 'block' : 'none';
+                        });
                     });
                     
                     console.log('Showing upgrade modal');
@@ -1148,15 +1259,18 @@
                 const subscriptionTier = document.getElementById('newSubscriptionTier').value;
                 const subscriptionStatus = document.getElementById('newSubscriptionStatus').value;
                 const subscriptionExpiresAt = document.getElementById('newSubscriptionExpiresAt').value;
-                const useCustomLimits = document.getElementById('useCustomLimits').checked;
+                const customLimitsOption = document.querySelector('input[name="customLimitsOption"]:checked').value;
                 
                 const upgradeData = {
                     subscriptionTier,
                     subscriptionStatus,
-                    subscriptionExpiresAt: subscriptionExpiresAt || null
+                    subscriptionExpiresAt: subscriptionExpiresAt || null,
+                    customLimitsOption
                 };
                 
-                if (useCustomLimits) {
+                // Handle custom limits based on selected option
+                if (customLimitsOption === 'set') {
+                    // Set new custom limits
                     upgradeData.customLimits = {
                         dailyMinutes: parseInt(document.getElementById('customDailyMinutes').value),
                         monthlyMinutes: parseInt(document.getElementById('customMonthlyMinutes').value),
@@ -1167,6 +1281,12 @@
                         dailyTranslationMinutes: parseInt(document.getElementById('customDailyTranslationMinutes').value),
                         dailyAIRequests: parseInt(document.getElementById('customDailyAIRequests').value)
                     };
+                } else if (customLimitsOption === 'keep') {
+                    // Keep existing custom limits (don't send customLimits in request)
+                    // The backend will preserve existing custom limits
+                } else {
+                    // Clear custom limits (default behavior)
+                    // The backend will clear custom limits when customLimits is not provided
                 }
                 
                 const response = await fetch(`/api/admin/users/${userId}/upgrade`, {
@@ -1394,6 +1514,224 @@
                     loadLanguages();
                 } else {
                     showError(data.error || 'Failed to delete language');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Daily Reset Management Functions
+        let countdownInterval = null;
+
+        // Load daily reset status
+        async function loadDailyResetStatus() {
+            try {
+                const response = await fetch('/api/admin/limits/daily-reset/status', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const status = data.status;
+                    const now = new Date();
+                    const nextMidnight = new Date(now);
+                    nextMidnight.setDate(nextMidnight.getDate() + 1);
+                    nextMidnight.setHours(0, 0, 0, 0);
+                    
+                    const timeUntilReset = nextMidnight.getTime() - now.getTime();
+                    const hours = Math.floor(timeUntilReset / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeUntilReset % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeUntilReset % (1000 * 60)) / 1000);
+                    
+                    document.getElementById('dailyResetContent').innerHTML = `
+                        <div class="reset-info-card">
+                            <h3>Daily Reset Service Status</h3>
+                            <p>
+                                <span class="status-indicator ${status.isRunning ? 'status-running' : 'status-stopped'}"></span>
+                                <strong>Service Status:</strong> ${status.isRunning ? 'Running' : 'Stopped'}
+                            </p>
+                            <p>
+                                <span class="status-indicator ${status.hasInterval ? 'status-running' : 'status-stopped'}"></span>
+                                <strong>Auto Reset:</strong> ${status.hasInterval ? 'Enabled' : 'Disabled'}
+                            </p>
+                        </div>
+                        
+                        <div class="reset-info-card">
+                            <h3>Next Reset Countdown</h3>
+                            <div class="countdown-timer" id="countdownTimer">
+                                ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}
+                            </div>
+                            <p><strong>Next Reset:</strong> ${nextMidnight.toLocaleString()}</p>
+                        </div>
+                        
+                        <div class="reset-info-card">
+                            <h3>Reset Statistics</h3>
+                            <div class="reset-stats">
+                                <div class="reset-stat">
+                                    <div class="reset-stat-value" id="usersWithLimits">-</div>
+                                    <div class="reset-stat-label">Users with Daily Limits</div>
+                                </div>
+                                <div class="reset-stat">
+                                    <div class="reset-stat-value" id="lastResetTime">-</div>
+                                    <div class="reset-stat-label">Last Reset Time</div>
+                                </div>
+                                <div class="reset-stat">
+                                    <div class="reset-stat-value" id="totalResets">-</div>
+                                    <div class="reset-stat-label">Total Resets Today</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="reset-info-card">
+                            <h3>Manual Actions</h3>
+                            <p>Use the manual reset button to immediately reset all users' daily limits.</p>
+                            <button onclick="triggerManualReset()" class="btn btn-warning">
+                                🔄 Reset All Daily Limits Now
+                            </button>
+                            <p style="margin-top: 10px; color: #6c757d; font-size: 0.9em;">
+                                <strong>Note:</strong> This will reset daily limits for all users immediately.
+                            </p>
+                        </div>
+                    `;
+                    
+                    // Start countdown timer
+                    startCountdownTimer();
+                    
+                    // Load additional stats
+                    loadDailyResetStats();
+                } else {
+                    document.getElementById('dailyResetContent').innerHTML = `
+                        <div class="error">
+                            Failed to load daily reset status: ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading daily reset status:', error);
+                document.getElementById('dailyResetContent').innerHTML = `
+                    <div class="error">
+                        Network error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Start countdown timer
+        function startCountdownTimer() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            countdownInterval = setInterval(() => {
+                const now = new Date();
+                const nextMidnight = new Date(now);
+                nextMidnight.setDate(nextMidnight.getDate() + 1);
+                nextMidnight.setHours(0, 0, 0, 0);
+                
+                const timeUntilReset = nextMidnight.getTime() - now.getTime();
+                
+                if (timeUntilReset <= 0) {
+                    // Reset time reached, reload the page
+                    clearInterval(countdownInterval);
+                    loadDailyResetStatus();
+                    return;
+                }
+                
+                const hours = Math.floor(timeUntilReset / (1000 * 60 * 60));
+                const minutes = Math.floor((timeUntilReset % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeUntilReset % (1000 * 60)) / 1000);
+                
+                const timerElement = document.getElementById('countdownTimer');
+                if (timerElement) {
+                    timerElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        // Load daily reset statistics
+        async function loadDailyResetStats() {
+            try {
+                // Get users with daily limits
+                const usersResponse = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                if (usersResponse.ok) {
+                    const usersData = await usersResponse.json();
+                    if (usersData.success) {
+                        const usersWithLimits = usersData.users.filter(user => 
+                            user.usageStats.dailyMinutes > 0 || 
+                            user.usageStats.dailyFileUploads > 0 || 
+                            user.usageStats.dailyAIRequests > 0
+                        ).length;
+                        
+                        const usersElement = document.getElementById('usersWithLimits');
+                        if (usersElement) {
+                            usersElement.textContent = usersWithLimits;
+                        }
+                    }
+                }
+                
+                // Get last reset time from logs
+                const logsResponse = await fetch('/api/admin/analytics/logs', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                if (logsResponse.ok) {
+                    const logsData = await logsResponse.json();
+                    if (logsData.success) {
+                        const resetLogs = logsData.logs.filter(log => 
+                            log.action === 'system_reset' && 
+                            log.details && 
+                            log.details.resetType === 'daily_limits_automatic'
+                        );
+                        
+                        if (resetLogs.length > 0) {
+                            const lastReset = new Date(resetLogs[0].timestamp);
+                            const lastResetElement = document.getElementById('lastResetTime');
+                            if (lastResetElement) {
+                                lastResetElement.textContent = lastReset.toLocaleString();
+                            }
+                        }
+                        
+                        // Count resets today
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const resetsToday = resetLogs.filter(log => 
+                            new Date(log.timestamp) >= today
+                        ).length;
+                        
+                        const totalResetsElement = document.getElementById('totalResets');
+                        if (totalResetsElement) {
+                            totalResetsElement.textContent = resetsToday;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading daily reset stats:', error);
+            }
+        }
+
+        // Trigger manual daily reset
+        async function triggerManualReset() {
+            if (!confirm('Are you sure you want to reset all users\' daily limits now? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/limits/daily-reset/trigger', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Daily reset triggered successfully! All users\' daily limits have been reset.');
+                    loadDailyResetStatus(); // Refresh the status
+                } else {
+                    showError(data.error || 'Failed to trigger daily reset');
                 }
             } catch (error) {
                 showError('Network error: ' + error.message);

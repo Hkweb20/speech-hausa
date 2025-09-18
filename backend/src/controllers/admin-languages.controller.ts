@@ -65,7 +65,7 @@ export async function getLanguages(req: Request, res: Response) {
       languages: languages.sort((a, b) => a.name.localeCompare(b.name))
     });
   } catch (error) {
-    logger.error('Error fetching languages:', error);
+    logger.error('Error fetching languages:', error as any);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch languages'
@@ -117,7 +117,7 @@ export async function addLanguage(req: Request, res: Response) {
       language: newLanguage
     });
   } catch (error) {
-    logger.error('Error adding language:', error);
+    logger.error('Error adding language:', error as any);
     res.status(500).json({
       success: false,
       error: 'Failed to add language'
@@ -158,8 +158,7 @@ export async function updateLanguage(req: Request, res: Response) {
       flag: flag !== undefined ? flag : languages[languageIndex].flag,
       isSourceLanguage: isSourceLanguage !== undefined ? isSourceLanguage : languages[languageIndex].isSourceLanguage,
       isTargetLanguage: isTargetLanguage !== undefined ? isTargetLanguage : languages[languageIndex].isTargetLanguage,
-      translationCode: translationCode || languages[languageIndex].translationCode,
-      updatedAt: new Date().toISOString()
+      translationCode: translationCode || languages[languageIndex].translationCode
     };
     
     logger.info(`Language updated: ${languages[languageIndex].name} (${languages[languageIndex].code})`);
@@ -170,7 +169,7 @@ export async function updateLanguage(req: Request, res: Response) {
       language: languages[languageIndex]
     });
   } catch (error) {
-    logger.error('Error updating language:', error);
+    logger.error('Error updating language:', error as any);
     res.status(500).json({
       success: false,
       error: 'Failed to update language'
@@ -209,7 +208,7 @@ export async function deleteLanguage(req: Request, res: Response) {
       message: 'Language deleted successfully'
     });
   } catch (error) {
-    logger.error('Error deleting language:', error);
+    logger.error('Error deleting language:', error as any);
     res.status(500).json({
       success: false,
       error: 'Failed to delete language'
@@ -241,7 +240,7 @@ export async function getAvailableLanguages(req: Request, res: Response) {
       }))
     });
   } catch (error) {
-    logger.error('Error fetching available languages:', error);
+    logger.error('Error fetching available languages:', error as any);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch available languages'

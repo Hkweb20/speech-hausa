@@ -68,7 +68,15 @@ const UserSchema = new mongoose_1.Schema({
         // Live recording tracking
         dailyLiveRecordingMinutes: { type: Number, default: 0 },
         monthlyLiveRecordingMinutes: { type: Number, default: 0 },
-        totalLiveRecordingMinutes: { type: Number, default: 0 }
+        totalLiveRecordingMinutes: { type: Number, default: 0 },
+        // Real-time streaming tracking
+        dailyRealTimeStreamingMinutes: { type: Number, default: 0 },
+        monthlyRealTimeStreamingMinutes: { type: Number, default: 0 },
+        totalRealTimeStreamingMinutes: { type: Number, default: 0 },
+        // Translation tracking
+        dailyTranslationMinutes: { type: Number, default: 0 },
+        monthlyTranslationMinutes: { type: Number, default: 0 },
+        totalTranslationMinutes: { type: Number, default: 0 }
     },
     pointsBalance: { type: Number, default: 0 },
     pointsHistory: [{
@@ -94,6 +102,23 @@ const UserSchema = new mongoose_1.Schema({
             pointsEarned: { type: Number, required: true },
             timestamp: { type: Date, default: Date.now },
             verified: { type: Boolean, default: false }
-        }]
+        }],
+    customLimits: {
+        dailyMinutes: { type: Number },
+        monthlyMinutes: { type: Number },
+        dailyFileUploads: { type: Number },
+        maxFileDuration: { type: Number },
+        dailyLiveRecordingMinutes: { type: Number },
+        dailyRealTimeStreamingMinutes: { type: Number },
+        dailyTranslationMinutes: { type: Number },
+        dailyAIRequests: { type: Number },
+        monthlyAIRequests: { type: Number },
+        aiFeatures: [{ type: String }],
+        exportFormats: [{ type: String }],
+        cloudSync: { type: Boolean },
+        offlineMode: { type: Boolean },
+        prioritySupport: { type: Boolean },
+        apiAccess: { type: Boolean }
+    }
 });
 exports.User = mongoose_1.default.model('User', UserSchema);

@@ -2,9 +2,41 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsageService = void 0;
 const User_1 = require("../models/User");
-const subscription_1 = require("../config/subscription");
+const subscription_tiers_service_1 = require("./subscription-tiers.service");
 const logger_1 = require("../config/logger");
 class UsageService {
+    /**
+     * Get effective limits for a user (tier limits or custom limits if set)
+     */
+    getEffectiveLimits(user) {
+        const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+        if (!tier) {
+            logger_1.logger.warn({ subscriptionTier: user.subscriptionTier }, 'Unknown subscription tier, falling back to free tier');
+            const freeTier = subscription_tiers_service_1.subscriptionTiersService.getTier('free');
+            return freeTier?.features || {};
+        }
+        // If user has custom limits, use those; otherwise use tier limits
+        if (user.customLimits) {
+            return {
+                dailyMinutes: user.customLimits.dailyMinutes ?? tier.features.dailyMinutes,
+                monthlyMinutes: user.customLimits.monthlyMinutes ?? tier.features.monthlyMinutes,
+                dailyFileUploads: user.customLimits.dailyFileUploads ?? tier.features.dailyFileUploads,
+                maxFileDuration: user.customLimits.maxFileDuration ?? tier.features.maxFileDuration,
+                dailyLiveRecordingMinutes: user.customLimits.dailyLiveRecordingMinutes ?? tier.features.dailyLiveRecordingMinutes,
+                dailyRealTimeStreamingMinutes: user.customLimits.dailyRealTimeStreamingMinutes ?? tier.features.dailyRealTimeStreamingMinutes,
+                dailyTranslationMinutes: user.customLimits.dailyTranslationMinutes ?? tier.features.dailyTranslationMinutes,
+                dailyAIRequests: user.customLimits.dailyAIRequests ?? tier.features.dailyAIRequests,
+                monthlyAIRequests: user.customLimits.monthlyAIRequests ?? tier.features.monthlyAIRequests,
+                aiFeatures: user.customLimits.aiFeatures ?? tier.features.aiFeatures,
+                exportFormats: user.customLimits.exportFormats ?? tier.features.exportFormats,
+                cloudSync: user.customLimits.cloudSync ?? tier.features.cloudSync,
+                offlineMode: user.customLimits.offlineMode ?? tier.features.offlineMode,
+                prioritySupport: user.customLimits.prioritySupport ?? tier.features.prioritySupport,
+                apiAccess: user.customLimits.apiAccess ?? tier.features.apiAccess
+            };
+        }
+        return tier.features;
+    }
     /**
      * Check if user can perform transcription based on their subscription tier
      */
@@ -19,7 +51,15 @@ class UsageService {
                     reason: 'User not found'
                 };
             }
-            const tier = subscription_1.SUBSCRIPTION_TIERS[user.subscriptionTier];
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                return {
+                    allowed: false,
+                    remainingMinutes: 0,
+                    tier: 'free',
+                    reason: 'Invalid subscription tier'
+                };
+            }
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -107,7 +147,17 @@ class UsageService {
                     reason: 'User not found'
                 };
             }
-            const tier = subscription_1.SUBSCRIPTION_TIERS[user.subscriptionTier];
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                logger_1.logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for file upload check');
+                return {
+                    allowed: false,
+                    remainingUploads: 0,
+                    maxFileDuration: 0,
+                    tier: 'free',
+                    reason: 'Invalid subscription tier'
+                };
+            }
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -222,7 +272,16 @@ class UsageService {
                     reason: 'User not found'
                 };
             }
-            const tier = subscription_1.SUBSCRIPTION_TIERS[user.subscriptionTier];
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                logger_1.logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for live recording check');
+                return {
+                    allowed: false,
+                    remainingMinutes: 0,
+                    tier: 'free',
+                    reason: 'Invalid subscription tier'
+                };
+            }
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -252,9 +311,11 @@ class UsageService {
                     dailyLiveRecordingMinutes: user.usageStats.dailyLiveRecordingMinutes,
                     maxDailyLiveRecordingMinutes: tier.features.dailyLiveRecordingMinutes,
                     remainingMinutes,
+                    requestedMinutes,
                     subscriptionTier: user.subscriptionTier
                 }, 'Checking daily live recording limit');
-                if (remainingMinutes < requestedMinutes) {
+                // For live recording, check if user has any remaining time (not per-file limit)
+                if (remainingMinutes <= 0) {
                     const tomorrow = new Date(today);
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     tomorrow.setHours(0, 0, 0, 0);
@@ -266,10 +327,31 @@ class UsageService {
                     }, 'Daily live recording limit exceeded');
                     return {
                         allowed: false,
-                        remainingMinutes: Math.max(0, remainingMinutes),
+                        remainingMinutes: 0,
                         tier: user.subscriptionTier,
                         resetTime: tomorrow,
                         reason: `Daily live recording limit exceeded. ${tier.features.dailyLiveRecordingMinutes} minutes per day allowed.`
+                    };
+                }
+                // Check if the requested duration would exceed the remaining limit
+                if (remainingMinutes < requestedMinutes) {
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(0, 0, 0, 0);
+                    logger_1.logger.warn({
+                        userId,
+                        dailyLiveRecordingMinutes: user.usageStats.dailyLiveRecordingMinutes,
+                        maxDailyLiveRecordingMinutes: tier.features.dailyLiveRecordingMinutes,
+                        remainingMinutes,
+                        requestedMinutes,
+                        subscriptionTier: user.subscriptionTier
+                    }, 'Live recording duration would exceed daily limit');
+                    return {
+                        allowed: false,
+                        remainingMinutes: Math.max(0, remainingMinutes),
+                        tier: user.subscriptionTier,
+                        resetTime: tomorrow,
+                        reason: `Live recording duration (${requestedMinutes.toFixed(2)} minutes) would exceed daily limit. ${remainingMinutes.toFixed(2)} minutes remaining.`
                     };
                 }
                 logger_1.logger.info({
@@ -298,6 +380,132 @@ class UsageService {
                 remainingMinutes: 0,
                 tier: 'free',
                 reason: 'Error checking live recording limits'
+            };
+        }
+    }
+    /**
+     * Check if user can perform real-time streaming based on their subscription tier
+     */
+    async checkRealTimeStreamingUsage(userId, requestedMinutes) {
+        try {
+            const user = await User_1.User.findById(userId);
+            if (!user) {
+                logger_1.logger.warn({ userId }, 'User not found for real-time streaming check');
+                return {
+                    allowed: false,
+                    remainingMinutes: 0,
+                    tier: 'free',
+                    reason: 'User not found'
+                };
+            }
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                logger_1.logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for real-time streaming check');
+                return {
+                    allowed: false,
+                    remainingMinutes: 0,
+                    tier: 'free',
+                    reason: 'Invalid subscription tier'
+                };
+            }
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const userLastReset = new Date(user.usageStats.lastResetDate);
+            logger_1.logger.info({
+                userId,
+                subscriptionTier: user.subscriptionTier,
+                dailyRealTimeStreamingMinutes: user.usageStats.dailyRealTimeStreamingMinutes,
+                tierLimits: {
+                    dailyRealTimeStreamingMinutes: tier.features.dailyRealTimeStreamingMinutes
+                },
+                requestedMinutes,
+                userLastReset: userLastReset.toISOString(),
+                today: today.toISOString()
+            }, 'Checking real-time streaming usage');
+            // Reset daily usage if it's a new day
+            if (userLastReset < today) {
+                logger_1.logger.info({ userId, userLastReset: userLastReset.toISOString(), today: today.toISOString() }, 'Resetting daily real-time streaming minutes for new day');
+                user.usageStats.dailyRealTimeStreamingMinutes = 0;
+                user.usageStats.lastResetDate = today;
+                await user.save();
+            }
+            // Check daily real-time streaming limit
+            if (tier.features.dailyRealTimeStreamingMinutes > 0) {
+                const remainingMinutes = tier.features.dailyRealTimeStreamingMinutes - user.usageStats.dailyRealTimeStreamingMinutes;
+                logger_1.logger.info({
+                    userId,
+                    dailyRealTimeStreamingMinutes: user.usageStats.dailyRealTimeStreamingMinutes,
+                    maxDailyRealTimeStreamingMinutes: tier.features.dailyRealTimeStreamingMinutes,
+                    remainingMinutes,
+                    requestedMinutes,
+                    subscriptionTier: user.subscriptionTier
+                }, 'Checking daily real-time streaming limit');
+                // For real-time streaming, check if user has any remaining time
+                if (remainingMinutes <= 0) {
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(0, 0, 0, 0);
+                    logger_1.logger.warn({
+                        userId,
+                        dailyRealTimeStreamingMinutes: user.usageStats.dailyRealTimeStreamingMinutes,
+                        maxDailyRealTimeStreamingMinutes: tier.features.dailyRealTimeStreamingMinutes,
+                        subscriptionTier: user.subscriptionTier
+                    }, 'Daily real-time streaming limit exceeded');
+                    return {
+                        allowed: false,
+                        remainingMinutes: 0,
+                        tier: user.subscriptionTier,
+                        resetTime: tomorrow,
+                        reason: `Daily real-time streaming limit exceeded. ${tier.features.dailyRealTimeStreamingMinutes} minutes per day allowed.`
+                    };
+                }
+                // Check if the requested duration would exceed the remaining limit
+                if (remainingMinutes < requestedMinutes) {
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(0, 0, 0, 0);
+                    logger_1.logger.warn({
+                        userId,
+                        dailyRealTimeStreamingMinutes: user.usageStats.dailyRealTimeStreamingMinutes,
+                        maxDailyRealTimeStreamingMinutes: tier.features.dailyRealTimeStreamingMinutes,
+                        remainingMinutes,
+                        requestedMinutes,
+                        subscriptionTier: user.subscriptionTier
+                    }, 'Real-time streaming duration would exceed daily limit');
+                    return {
+                        allowed: false,
+                        remainingMinutes: Math.max(0, remainingMinutes),
+                        tier: user.subscriptionTier,
+                        resetTime: tomorrow,
+                        reason: `Real-time streaming duration (${requestedMinutes.toFixed(2)} minutes) would exceed daily limit. ${remainingMinutes.toFixed(2)} minutes remaining.`
+                    };
+                }
+                logger_1.logger.info({
+                    userId,
+                    remainingMinutes: remainingMinutes - requestedMinutes,
+                    subscriptionTier: user.subscriptionTier
+                }, 'Real-time streaming allowed');
+                return {
+                    allowed: true,
+                    remainingMinutes: remainingMinutes - requestedMinutes,
+                    tier: user.subscriptionTier
+                };
+            }
+            // Unlimited real-time streaming
+            logger_1.logger.info({ userId, subscriptionTier: user.subscriptionTier }, 'Unlimited real-time streaming allowed');
+            return {
+                allowed: true,
+                remainingMinutes: -1, // unlimited
+                tier: user.subscriptionTier
+            };
+        }
+        catch (error) {
+            logger_1.logger.error({ error, userId }, 'Error checking real-time streaming limits');
+            return {
+                allowed: false,
+                remainingMinutes: 0,
+                tier: 'free',
+                reason: 'Error checking real-time streaming limits'
             };
         }
     }
@@ -421,6 +629,259 @@ class UsageService {
         }
         catch (error) {
             logger_1.logger.error({ error, userId, fileDurationMinutes }, 'Error recording file upload usage');
+        }
+    }
+    /**
+     * Check if user can perform translation based on their subscription tier
+     */
+    async checkTranslationUsage(userId, requestedMinutes) {
+        try {
+            const user = await User_1.User.findById(userId);
+            if (!user) {
+                logger_1.logger.warn({ userId }, 'User not found for translation check');
+                return {
+                    allowed: false,
+                    remainingMinutes: 0,
+                    tier: 'free',
+                    reason: 'User not found'
+                };
+            }
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                logger_1.logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for translation check');
+                return {
+                    allowed: false,
+                    remainingMinutes: 0,
+                    tier: 'free',
+                    reason: 'Invalid subscription tier'
+                };
+            }
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const userLastReset = new Date(user.usageStats.lastResetDate);
+            logger_1.logger.info({
+                userId,
+                subscriptionTier: user.subscriptionTier,
+                dailyTranslationMinutes: user.usageStats.dailyTranslationMinutes,
+                tierLimits: {
+                    dailyTranslationMinutes: tier.features.dailyTranslationMinutes
+                },
+                requestedMinutes,
+                userLastReset: userLastReset.toISOString(),
+                today: today.toISOString()
+            }, 'Checking translation usage');
+            // Reset daily usage if it's a new day
+            if (userLastReset < today) {
+                logger_1.logger.info({ userId, userLastReset: userLastReset.toISOString(), today: today.toISOString() }, 'Resetting daily translation minutes for new day');
+                user.usageStats.dailyTranslationMinutes = 0;
+                user.usageStats.lastResetDate = today;
+                await user.save();
+            }
+            // Check daily translation limit
+            if (tier.features.dailyTranslationMinutes > 0) {
+                const remainingMinutes = tier.features.dailyTranslationMinutes - user.usageStats.dailyTranslationMinutes;
+                logger_1.logger.info({
+                    userId,
+                    dailyTranslationMinutes: user.usageStats.dailyTranslationMinutes,
+                    maxDailyTranslationMinutes: tier.features.dailyTranslationMinutes,
+                    remainingMinutes,
+                    requestedMinutes,
+                    subscriptionTier: user.subscriptionTier
+                }, 'Checking daily translation limit');
+                // Check if user has any remaining time
+                if (remainingMinutes <= 0) {
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(0, 0, 0, 0);
+                    logger_1.logger.warn({
+                        userId,
+                        dailyTranslationMinutes: user.usageStats.dailyTranslationMinutes,
+                        maxDailyTranslationMinutes: tier.features.dailyTranslationMinutes,
+                        subscriptionTier: user.subscriptionTier
+                    }, 'Daily translation limit exceeded');
+                    return {
+                        allowed: false,
+                        remainingMinutes: 0,
+                        tier: user.subscriptionTier,
+                        resetTime: tomorrow,
+                        reason: `Daily translation limit exceeded. ${tier.features.dailyTranslationMinutes} minutes per day allowed.`
+                    };
+                }
+                // Check if the requested duration would exceed the remaining limit
+                if (remainingMinutes < requestedMinutes) {
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(0, 0, 0, 0);
+                    logger_1.logger.warn({
+                        userId,
+                        dailyTranslationMinutes: user.usageStats.dailyTranslationMinutes,
+                        maxDailyTranslationMinutes: tier.features.dailyTranslationMinutes,
+                        remainingMinutes,
+                        requestedMinutes,
+                        subscriptionTier: user.subscriptionTier
+                    }, 'Translation duration would exceed daily limit');
+                    return {
+                        allowed: false,
+                        remainingMinutes: Math.max(0, remainingMinutes),
+                        tier: user.subscriptionTier,
+                        resetTime: tomorrow,
+                        reason: `Translation duration (${requestedMinutes.toFixed(2)} minutes) would exceed daily limit. ${remainingMinutes.toFixed(2)} minutes remaining.`
+                    };
+                }
+                logger_1.logger.info({
+                    userId,
+                    remainingMinutes: remainingMinutes - requestedMinutes,
+                    subscriptionTier: user.subscriptionTier
+                }, 'Translation allowed');
+                return {
+                    allowed: true,
+                    remainingMinutes: remainingMinutes - requestedMinutes,
+                    tier: user.subscriptionTier
+                };
+            }
+            // No translation access (0 minutes)
+            logger_1.logger.warn({
+                userId,
+                subscriptionTier: user.subscriptionTier,
+                dailyTranslationMinutes: tier.features.dailyTranslationMinutes
+            }, 'No translation access for this tier');
+            return {
+                allowed: false,
+                remainingMinutes: 0,
+                tier: user.subscriptionTier,
+                reason: `Translation not available for ${user.subscriptionTier} tier. Upgrade to Gold or Premium for translation features.`
+            };
+        }
+        catch (error) {
+            logger_1.logger.error({ error, userId }, 'Error checking translation limits');
+            return {
+                allowed: false,
+                remainingMinutes: 0,
+                tier: 'free',
+                reason: 'Error checking translation limits'
+            };
+        }
+    }
+    /**
+     * Record translation usage
+     */
+    async recordTranslationUsage(userId, minutes) {
+        try {
+            const user = await User_1.User.findById(userId);
+            if (!user) {
+                logger_1.logger.warn({ userId }, 'User not found for translation usage recording');
+                return;
+            }
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const userLastReset = new Date(user.usageStats.lastResetDate);
+            logger_1.logger.info({
+                userId,
+                subscriptionTier: user.subscriptionTier,
+                beforeReset: {
+                    dailyTranslationMinutes: user.usageStats.dailyTranslationMinutes,
+                    lastResetDate: userLastReset.toISOString()
+                },
+                today: today.toISOString(),
+                minutes
+            }, 'Recording translation usage');
+            // Reset daily usage if it's a new day
+            if (userLastReset < today) {
+                logger_1.logger.info({ userId, userLastReset: userLastReset.toISOString(), today: today.toISOString() }, 'Resetting daily translation minutes for new day');
+                user.usageStats.dailyTranslationMinutes = 0;
+                user.usageStats.lastResetDate = today;
+            }
+            // Update translation stats
+            const oldDailyMinutes = user.usageStats.dailyTranslationMinutes;
+            user.usageStats.dailyTranslationMinutes += minutes;
+            user.usageStats.monthlyTranslationMinutes += minutes;
+            user.usageStats.totalTranslationMinutes += minutes;
+            // Also update general transcription stats
+            user.usageStats.dailyMinutes += minutes;
+            user.usageStats.monthlyMinutes += minutes;
+            user.usageStats.totalMinutes += minutes;
+            user.usageStats.transcriptsCount += 1;
+            await user.save();
+            logger_1.logger.info({
+                userId,
+                subscriptionTier: user.subscriptionTier,
+                minutes,
+                translation: {
+                    before: oldDailyMinutes,
+                    after: user.usageStats.dailyTranslationMinutes,
+                    monthly: user.usageStats.monthlyTranslationMinutes,
+                    total: user.usageStats.totalTranslationMinutes
+                },
+                general: {
+                    daily: user.usageStats.dailyMinutes,
+                    monthly: user.usageStats.monthlyMinutes,
+                    total: user.usageStats.totalMinutes
+                }
+            }, 'Translation usage recorded successfully');
+        }
+        catch (error) {
+            logger_1.logger.error({ error, userId, minutes }, 'Error recording translation usage');
+        }
+    }
+    /**
+     * Record real-time streaming usage
+     */
+    async recordRealTimeStreamingUsage(userId, minutes) {
+        try {
+            const user = await User_1.User.findById(userId);
+            if (!user) {
+                logger_1.logger.warn({ userId }, 'User not found for real-time streaming usage recording');
+                return;
+            }
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const userLastReset = new Date(user.usageStats.lastResetDate);
+            logger_1.logger.info({
+                userId,
+                subscriptionTier: user.subscriptionTier,
+                beforeReset: {
+                    dailyRealTimeStreamingMinutes: user.usageStats.dailyRealTimeStreamingMinutes,
+                    lastResetDate: userLastReset.toISOString()
+                },
+                today: today.toISOString(),
+                minutes
+            }, 'Recording real-time streaming usage');
+            // Reset daily usage if it's a new day
+            if (userLastReset < today) {
+                logger_1.logger.info({ userId, userLastReset: userLastReset.toISOString(), today: today.toISOString() }, 'Resetting daily real-time streaming minutes for new day');
+                user.usageStats.dailyRealTimeStreamingMinutes = 0;
+                user.usageStats.lastResetDate = today;
+            }
+            // Update real-time streaming stats
+            const oldDailyMinutes = user.usageStats.dailyRealTimeStreamingMinutes;
+            user.usageStats.dailyRealTimeStreamingMinutes += minutes;
+            user.usageStats.monthlyRealTimeStreamingMinutes += minutes;
+            user.usageStats.totalRealTimeStreamingMinutes += minutes;
+            // Also update general transcription stats
+            user.usageStats.dailyMinutes += minutes;
+            user.usageStats.monthlyMinutes += minutes;
+            user.usageStats.totalMinutes += minutes;
+            user.usageStats.transcriptsCount += 1;
+            await user.save();
+            logger_1.logger.info({
+                userId,
+                subscriptionTier: user.subscriptionTier,
+                minutes,
+                realTimeStreaming: {
+                    before: oldDailyMinutes,
+                    after: user.usageStats.dailyRealTimeStreamingMinutes,
+                    monthly: user.usageStats.monthlyRealTimeStreamingMinutes,
+                    total: user.usageStats.totalRealTimeStreamingMinutes
+                },
+                general: {
+                    daily: user.usageStats.dailyMinutes,
+                    monthly: user.usageStats.monthlyMinutes,
+                    total: user.usageStats.totalMinutes
+                }
+            }, 'Real-time streaming usage recorded successfully');
+        }
+        catch (error) {
+            logger_1.logger.error({ error, userId, minutes }, 'Error recording real-time streaming usage');
         }
     }
     /**
@@ -559,7 +1020,15 @@ class UsageService {
                     reason: 'User not found'
                 };
             }
-            const tier = subscription_1.SUBSCRIPTION_TIERS[user.subscriptionTier];
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                logger_1.logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for ad points check');
+                return {
+                    success: false,
+                    newBalance: user.pointsBalance,
+                    reason: 'Invalid subscription tier'
+                };
+            }
             // Check daily ad watch limit
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -629,23 +1098,73 @@ class UsageService {
             if (!user) {
                 return null;
             }
-            const tier = subscription_1.SUBSCRIPTION_TIERS[user.subscriptionTier];
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                logger_1.logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for user stats');
+                // Fall back to free tier
+                const freeTier = subscription_tiers_service_1.subscriptionTiersService.getTier('free');
+                if (!freeTier) {
+                    return null;
+                }
+                const effectiveLimits = {
+                    dailyMinutes: freeTier.features.dailyMinutes,
+                    monthlyMinutes: freeTier.features.monthlyMinutes,
+                    dailyFileUploads: freeTier.features.dailyFileUploads,
+                    maxFileDuration: freeTier.features.maxFileDuration,
+                    dailyLiveRecordingMinutes: freeTier.features.dailyLiveRecordingMinutes,
+                    dailyRealTimeStreamingMinutes: freeTier.features.dailyRealTimeStreamingMinutes,
+                    dailyTranslationMinutes: freeTier.features.dailyTranslationMinutes,
+                    dailyAIRequests: freeTier.features.dailyAIRequests,
+                    monthlyAIRequests: freeTier.features.monthlyAIRequests,
+                    aiFeatures: freeTier.features.aiFeatures
+                };
+                return {
+                    usage: user.usageStats,
+                    points: user.pointsBalance,
+                    tier: 'free',
+                    limits: {
+                        dailyMinutes: effectiveLimits.dailyMinutes,
+                        monthlyMinutes: effectiveLimits.monthlyMinutes,
+                        maxFileSize: freeTier.features.maxFileSize,
+                        maxTranscripts: freeTier.features.maxTranscripts,
+                        dailyAdWatches: freeTier.limits.dailyAdWatches,
+                        maxPointsBalance: freeTier.limits.maxPointsBalance,
+                        dailyFileUploads: effectiveLimits.dailyFileUploads,
+                        maxFileDuration: effectiveLimits.maxFileDuration,
+                        dailyLiveRecordingMinutes: effectiveLimits.dailyLiveRecordingMinutes,
+                        dailyRealTimeStreamingMinutes: effectiveLimits.dailyRealTimeStreamingMinutes,
+                        dailyTranslationMinutes: effectiveLimits.dailyTranslationMinutes,
+                        dailyAIRequests: effectiveLimits.dailyAIRequests,
+                        monthlyAIRequests: effectiveLimits.monthlyAIRequests,
+                        aiFeatures: effectiveLimits.aiFeatures
+                    }
+                };
+            }
+            const effectiveLimits = this.getEffectiveLimits(user);
             return {
                 usage: user.usageStats,
                 points: user.pointsBalance,
                 tier: user.subscriptionTier,
                 limits: {
-                    dailyMinutes: tier.features.dailyMinutes,
-                    monthlyMinutes: tier.features.monthlyMinutes,
+                    dailyMinutes: effectiveLimits.dailyMinutes,
+                    monthlyMinutes: effectiveLimits.monthlyMinutes,
                     maxFileSize: tier.features.maxFileSize,
                     maxTranscripts: tier.features.maxTranscripts,
                     dailyAdWatches: tier.limits.dailyAdWatches,
                     maxPointsBalance: tier.limits.maxPointsBalance,
                     // File upload limits
-                    dailyFileUploads: tier.features.dailyFileUploads,
-                    maxFileDuration: tier.features.maxFileDuration,
+                    dailyFileUploads: effectiveLimits.dailyFileUploads,
+                    maxFileDuration: effectiveLimits.maxFileDuration,
                     // Live recording limits
-                    dailyLiveRecordingMinutes: tier.features.dailyLiveRecordingMinutes
+                    dailyLiveRecordingMinutes: effectiveLimits.dailyLiveRecordingMinutes,
+                    // Real-time streaming limits
+                    dailyRealTimeStreamingMinutes: effectiveLimits.dailyRealTimeStreamingMinutes,
+                    // Translation limits
+                    dailyTranslationMinutes: effectiveLimits.dailyTranslationMinutes,
+                    // AI features limits
+                    dailyAIRequests: effectiveLimits.dailyAIRequests,
+                    monthlyAIRequests: effectiveLimits.monthlyAIRequests,
+                    aiFeatures: effectiveLimits.aiFeatures
                 }
             };
         }
@@ -668,7 +1187,16 @@ class UsageService {
                     reason: 'User not found'
                 };
             }
-            const tier = subscription_1.SUBSCRIPTION_TIERS[user.subscriptionTier];
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                logger_1.logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for AI usage check');
+                return {
+                    allowed: false,
+                    remainingRequests: 0,
+                    tier: 'free',
+                    reason: 'Invalid subscription tier'
+                };
+            }
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const userLastReset = new Date(user.usageStats.lastResetDate);
@@ -777,7 +1305,18 @@ class UsageService {
                     resetTime: null
                 };
             }
-            const tier = subscription_1.SUBSCRIPTION_TIERS[user.subscriptionTier];
+            const tier = subscription_tiers_service_1.subscriptionTiersService.getTier(user.subscriptionTier);
+            if (!tier) {
+                logger_1.logger.warn({ userId, subscriptionTier: user.subscriptionTier }, 'Invalid subscription tier for AI usage stats');
+                return {
+                    dailyRequests: 0,
+                    monthlyRequests: 0,
+                    totalRequests: 0,
+                    remainingRequests: 5,
+                    tier: 'free',
+                    resetTime: null
+                };
+            }
             const dailyLimit = tier.features.dailyAIRequests || 5;
             const monthlyLimit = tier.features.monthlyAIRequests || 150;
             const remainingRequests = Math.min(dailyLimit - user.usageStats.dailyAIRequests, monthlyLimit - user.usageStats.monthlyAIRequests);

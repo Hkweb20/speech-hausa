@@ -1,16 +1,16 @@
 import { AdminRequest } from '../middleware/admin-auth';
 import { Response } from 'express';
-import { SUBSCRIPTION_TIERS } from '../config/subscription';
+import { subscriptionTiersService } from '../services/subscription-tiers.service';
 import { AdminLog } from '../models/AdminLog';
 import { logger } from '../config/logger';
-import fs from 'fs';
-import path from 'path';
+import { dailyResetService } from '../services/daily-reset.service';
 
 export async function getSubscriptionTiers(req: AdminRequest, res: Response) {
   try {
+    const tiers = subscriptionTiersService.getTiers();
     res.json({
       success: true,
-      tiers: SUBSCRIPTION_TIERS
+      tiers
     });
   } catch (error) {
     logger.error({ error }, 'Error getting subscription tiers');
@@ -26,59 +26,29 @@ export async function updateSubscriptionTier(req: AdminRequest, res: Response) {
     const { tierName } = req.params;
     const updates = req.body;
 
-    if (!SUBSCRIPTION_TIERS[tierName]) {
+    const currentTier = subscriptionTiersService.getTier(tierName);
+    if (!currentTier) {
       return res.status(404).json({
         success: false,
         error: 'Subscription tier not found'
       });
     }
 
-    // Validate the updates
-    const allowedFields = [
-      'name', 'price', 'currency', 'billingCycle',
-      'features.dailyMinutes', 'features.monthlyMinutes', 'features.maxFileSize',
-      'features.maxTranscripts', 'features.exportFormats', 'features.aiFeatures',
-      'features.cloudSync', 'features.offlineMode', 'features.prioritySupport',
-      'features.apiAccess', 'features.dailyAIRequests', 'features.monthlyAIRequests',
-      'features.dailyFileUploads', 'features.maxFileDuration',
-      'features.dailyLiveRecordingMinutes', 'features.dailyRealTimeStreamingMinutes',
-      'features.dailyTranslationMinutes',
-      'limits.dailyAdWatches', 'limits.pointsPerAd', 'limits.maxPointsBalance',
-      'description'
-    ];
-
-    // Deep merge the updates
-    const updatedTier = { ...SUBSCRIPTION_TIERS[tierName] };
+    // Update the tier using the centralized service
+    const success = subscriptionTiersService.updateTier(tierName, updates);
     
-    for (const [key, value] of Object.entries(updates)) {
-      if (key === 'features' && typeof value === 'object') {
-        // Handle features object directly
-        updatedTier.features = { ...updatedTier.features, ...value };
-      } else if (allowedFields.includes(key)) {
-        const keys = key.split('.');
-        let current = updatedTier;
-        
-        for (let i = 0; i < keys.length - 1; i++) {
-          if (!current[keys[i]]) {
-            current[keys[i]] = {};
-          }
-          current = current[keys[i]];
-        }
-        
-        current[keys[keys.length - 1]] = value;
-      }
+    if (!success) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update subscription tier'
+      });
     }
 
-    // Update the subscription tiers file
-    const subscriptionPath = path.join(__dirname, '../config/subscription.ts');
-    let subscriptionContent = fs.readFileSync(subscriptionPath, 'utf8');
-    
-    // This is a simplified approach - in production, you'd want a more robust config management system
-    SUBSCRIPTION_TIERS[tierName] = updatedTier;
+    const updatedTier = subscriptionTiersService.getTier(tierName);
 
     // Log the admin action
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'update_limits',
       resource: 'subscription_tiers',
@@ -86,7 +56,7 @@ export async function updateSubscriptionTier(req: AdminRequest, res: Response) {
       details: {
         tierName,
         updates,
-        oldTier: SUBSCRIPTION_TIERS[tierName],
+        oldTier: currentTier,
         newTier: updatedTier
       },
       ipAddress: req.ip || 'unknown',
@@ -127,7 +97,7 @@ export async function updateAllSubscriptionTiers(req: AdminRequest, res: Respons
 
     // Validate each tier
     for (const [tierName, tierData] of Object.entries(tiers)) {
-      if (!SUBSCRIPTION_TIERS[tierName]) {
+      if (!subscriptionTiersService.getTier(tierName)) {
         return res.status(400).json({
           success: false,
           error: `Invalid tier name: ${tierName}`
@@ -135,13 +105,24 @@ export async function updateAllSubscriptionTiers(req: AdminRequest, res: Respons
       }
     }
 
-    // Update all tiers
-    const oldTiers = { ...SUBSCRIPTION_TIERS };
-    Object.assign(SUBSCRIPTION_TIERS, tiers);
+    // Get old tiers for logging
+    const oldTiers = subscriptionTiersService.getTiers();
+
+    // Update all tiers using the centralized service
+    const success = subscriptionTiersService.updateAllTiers(tiers);
+    
+    if (!success) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update subscription tiers'
+      });
+    }
+
+    const updatedTiers = subscriptionTiersService.getTiers();
 
     // Log the admin action
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'update_limits',
       resource: 'subscription_tiers',
@@ -161,7 +142,7 @@ export async function updateAllSubscriptionTiers(req: AdminRequest, res: Respons
     res.json({
       success: true,
       message: 'All subscription tiers updated successfully',
-      tiers: SUBSCRIPTION_TIERS
+      tiers: updatedTiers
     });
 
   } catch (error) {
@@ -195,7 +176,7 @@ export async function resetAllDailyLimits(req: AdminRequest, res: Response) {
 
     // Log the admin action
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'system_reset',
       resource: 'user_limits',
@@ -222,6 +203,62 @@ export async function resetAllDailyLimits(req: AdminRequest, res: Response) {
     res.status(500).json({
       success: false,
       error: 'Failed to reset daily limits'
+    });
+  }
+}
+
+export async function getDailyResetStatus(req: AdminRequest, res: Response) {
+  try {
+    const status = dailyResetService.getStatus();
+    
+    res.json({
+      success: true,
+      status
+    });
+  } catch (error) {
+    logger.error({ error }, 'Error getting daily reset status');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get daily reset status'
+    });
+  }
+}
+
+export async function triggerDailyReset(req: AdminRequest, res: Response) {
+  try {
+    await dailyResetService.triggerManualReset();
+    
+    // Log the admin action (with error handling)
+    try {
+      await AdminLog.create({
+        adminId: (req.admin!._id as any).toString(),
+        adminEmail: req.admin!.email,
+        action: 'manual_daily_reset',
+        resource: 'user_limits',
+        details: {
+          resetType: 'daily_limits_manual',
+          triggeredBy: 'admin'
+        },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown'
+      });
+    } catch (logError) {
+      logger.warn({ logError }, 'Failed to log manual reset action');
+    }
+
+    logger.info({ 
+      adminId: req.admin!._id 
+    }, 'Manual daily reset triggered by admin');
+
+    res.json({
+      success: true,
+      message: 'Daily reset triggered successfully'
+    });
+  } catch (error) {
+    logger.error({ error }, 'Error triggering daily reset');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to trigger daily reset'
     });
   }
 }

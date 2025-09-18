@@ -3,9 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAIUsage = exports.formatForAllPlatforms = exports.formatForPlatform = exports.summarizeText = void 0;
 // import { GeminiAIService } from '../services/gemini-ai.service';
 const logger_1 = require("../config/logger");
-// import { UsageService } from '../services/usage.service';
+const usage_service_1 = require("../services/usage.service");
 // const geminiService = new GeminiAIService();
-// const usageService = new UsageService();
+const usageService = new usage_service_1.UsageService();
 /**
  * Summarize transcribed text using Gemini AI
  */

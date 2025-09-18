@@ -792,7 +792,7 @@
             <span class="limit-label">Subscription:</span>
             <span class="limit-value" id="aiSubscriptionTier">Free</span>
           </div>
-        </div>
+      </div>
     </div>
 
     <!-- Main Content -->
@@ -933,7 +933,36 @@
         <!-- WebSocket Live Feature -->
         <div class="feature-card">
           <h3>⚡ Real-time Streaming</h3>
-          <p>Connect to our WebSocket service for ultra-low latency real-time transcription.</p>
+          <p>Connect to our WebSocket service for ultra-low latency real-time transcription and translation.</p>
+          
+          <!-- Language Selection -->
+          <div style="margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+              <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
+                🎤 Source Language (What you're speaking):
+              </label>
+              <select id="streamSourceLanguage" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                <option value="ha-NG">🇳🇬 Hausa</option>
+                <option value="yo-NG">🇳🇬 Yoruba</option>
+                <option value="ig-NG">🇳🇬 Igbo</option>
+                <option value="ar-SA">🇸🇦 Arabic</option>
+                <option value="en-US">🇺🇸 English</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
+                🌍 Target Language (Translate to):
+              </label>
+              <select id="streamTargetLanguage" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                <option value="ha-NG">🇳🇬 Hausa</option>
+                <option value="yo-NG">🇳🇬 Yoruba</option>
+                <option value="ig-NG">🇳🇬 Igbo</option>
+                <option value="ar-SA">🇸🇦 Arabic</option>
+                <option value="en-US">🇺🇸 English</option>
+              </select>
+            </div>
+          </div>
+          
           <div style="margin-bottom: 20px;">
             <label style="display: block; margin-bottom: 10px;">
               Mode:
@@ -959,17 +988,55 @@
             <button class="btn btn-secondary" id="endSessionBtn" disabled>End Session</button>
           </div>
           <div class="result-area" id="streamResult">
+            <!-- Current Speech (Real-time) -->
             <div style="margin-bottom: 20px;">
-              <h4 style="color: #667eea; margin-bottom: 10px;">📝 Current (Latest)</h4>
+              <h4 style="color: #667eea; margin-bottom: 10px;">📝 Current Speech (Real-time)</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <!-- Source Language Transcription -->
+                <div>
+                  <h5 style="color: #667eea; margin-bottom: 8px; font-size: 14px; font-weight: 500;">
+                    🎤 <span id="currentSourceLang">Hausa</span> (Original)
+                  </h5>
               <div class="transcript-text" id="currentTranscript" style="background: #f0f8ff; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; min-height: 60px; font-style: italic; color: #666;">
                 Current speech will appear here...
               </div>
             </div>
+                <!-- Target Language Translation -->
             <div>
-              <h4 style="color: #27ae60; margin-bottom: 10px;">📄 Complete Transcript</h4>
+                  <h5 style="color: #e74c3c; margin-bottom: 8px; font-size: 14px; font-weight: 500;">
+                    🌍 <span id="currentTargetLang">English</span> (Translation)
+                  </h5>
+                  <div class="transcript-text" id="currentTranslation" style="background: #fdf2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #e74c3c; min-height: 60px; font-style: italic; color: #666;">
+                    Translation will appear here...
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Complete Transcript & Translation -->
+            <div>
+              <h4 style="color: #27ae60; margin-bottom: 10px;">📄 Complete Results</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <!-- Complete Transcription -->
+                <div>
+                  <h5 style="color: #27ae60; margin-bottom: 8px; font-size: 14px; font-weight: 500;">
+                    🎤 <span id="completeSourceLang">Hausa</span> (Complete)
+                  </h5>
               <div class="transcript-text" id="fullTranscript" style="background: #f0f9f4; padding: 15px; border-radius: 8px; border-left: 4px solid #27ae60; min-height: 120px; max-height: 300px; overflow-y: auto;">
                 Complete transcript will appear here...
               </div>
+                </div>
+                <!-- Complete Translation -->
+                <div>
+                  <h5 style="color: #8e44ad; margin-bottom: 8px; font-size: 14px; font-weight: 500;">
+                    🌍 <span id="completeTargetLang">English</span> (Complete)
+                  </h5>
+                  <div class="transcript-text" id="fullTranslation" style="background: #f8f4ff; padding: 15px; border-radius: 8px; border-left: 4px solid #8e44ad; min-height: 120px; max-height: 300px; overflow-y: auto;">
+                    Complete translation will appear here...
+                  </div>
+                </div>
+              </div>
+            </div>
               <!-- AI Features Warning -->
               <div id="streamAiLimitsWarning" class="usage-info" style="display: none; margin-bottom: 15px;">
                 <strong>🤖 AI Features:</strong>
@@ -1955,9 +2022,9 @@
           if (data.code === 'FILE_UPLOAD_LIMIT_EXCEEDED') {
             showError(`Upload limit exceeded: ${data.details.reason}`, 'uploadResult');
             log('Upload limit exceeded: ' + data.details.reason);
-          } else {
-            showError(data.message || 'Transcription failed', 'uploadResult');
-            log('Transcription error: ' + (data.message || 'Unknown error'));
+        } else {
+          showError(data.message || 'Transcription failed', 'uploadResult');
+          log('Transcription error: ' + (data.message || 'Unknown error'));
           }
         }
       } catch (error) {
@@ -2218,9 +2285,9 @@
           if (data.code === 'LIVE_RECORDING_LIMIT_EXCEEDED') {
             showError(`Live recording limit exceeded: ${data.details.reason}`, 'recordResult');
             log(`Live recording limit exceeded: ${data.details.reason}`);
-          } else {
-            showError(data.message || 'Transcription failed', 'recordResult');
-            log('Recording transcription error: ' + (data.message || 'Unknown error'));
+        } else {
+          showError(data.message || 'Transcription failed', 'recordResult');
+          log('Recording transcription error: ' + (data.message || 'Unknown error'));
           }
         }
       } catch (error) {
@@ -2239,6 +2306,8 @@
     let canSend = false;
     let fullTranscript = ''; // Stores complete transcript
     let currentPartial = ''; // Stores current partial text
+    let fullTranslation = ''; // Stores complete translation
+    let currentTranslation = ''; // Stores current partial translation
 
     // Audio processing helpers
     function blobToBase64(blob) {
@@ -2292,10 +2361,29 @@
       return btoa(binary);
     }
 
+    // Helper function to update language labels
+    function updateLanguageLabels(sourceLanguage, targetLanguage) {
+      const sourceLangName = getLanguageName(sourceLanguage);
+      const targetLangName = getLanguageName(targetLanguage);
+      
+      // Update current speech labels
+      document.getElementById('currentSourceLang').textContent = sourceLangName;
+      document.getElementById('currentTargetLang').textContent = targetLangName;
+      
+      // Update complete results labels
+      document.getElementById('completeSourceLang').textContent = sourceLangName;
+      document.getElementById('completeTargetLang').textContent = targetLangName;
+    }
+
     // WebSocket functions
     async function connectWebSocket() {
       const mode = document.getElementById('streamMode').value;
+      const sourceLanguage = document.getElementById('streamSourceLanguage').value;
+      const targetLanguage = document.getElementById('streamTargetLanguage').value;
       const isPremium = currentUser ? currentUser.isPremium : false;
+      
+      // Update language labels
+      updateLanguageLabels(sourceLanguage, targetLanguage);
       
       // Check real-time streaming limits for authenticated users
       if (authToken && currentUser) {
@@ -2318,11 +2406,15 @@
         }
       }
       
-      // Reset transcripts
+      // Reset transcripts and translations
       fullTranscript = '';
       currentPartial = '';
+      fullTranslation = '';
+      currentTranslation = '';
       document.getElementById('fullTranscript').textContent = 'Complete transcript will appear here...';
       document.getElementById('currentTranscript').textContent = 'Current speech will appear here...';
+      document.getElementById('fullTranslation').textContent = 'Complete translation will appear here...';
+      document.getElementById('currentTranslation').textContent = 'Translation will appear here...';
       
       // Hide AI warning initially
       const warningElement = document.getElementById('streamAiLimitsWarning');
@@ -2338,7 +2430,14 @@
         log('[live] connected');
         log('[live] currentUser:', currentUser);
         log('[live] userId being sent:', currentUser?.id);
-        liveSocket.emit('join_session', { mode, userId: currentUser?.id });
+        log('[live] sourceLanguage:', sourceLanguage);
+        log('[live] targetLanguage:', targetLanguage);
+        liveSocket.emit('join_session', { 
+          mode, 
+          userId: currentUser?.id,
+          sourceLanguage: sourceLanguage,
+          targetLanguage: targetLanguage
+        });
       });
 
       liveSocket.on('session_status', (msg) => {
@@ -2360,14 +2459,16 @@
             loadUserStats();
           }
         } else if (msg.status === 'active') {
-          document.getElementById('connectBtn').disabled = true;
-          document.getElementById('disconnectBtn').disabled = false;
-          document.getElementById('startMicBtn').disabled = false;
-          document.getElementById('endSessionBtn').disabled = false;
+        document.getElementById('connectBtn').disabled = true;
+        document.getElementById('disconnectBtn').disabled = false;
+        document.getElementById('startMicBtn').disabled = false;
+        document.getElementById('endSessionBtn').disabled = false;
         }
       });
 
       liveSocket.on('transcript_update', (msg) => {
+        log('[live] transcript_update received:', JSON.stringify(msg));
+        
         if (msg.isFinal) {
           // Final text - add to complete transcript
           fullTranscript += (fullTranscript ? ' ' : '') + msg.text;
@@ -2376,6 +2477,16 @@
           // Update displays
           document.getElementById('fullTranscript').textContent = fullTranscript;
           document.getElementById('currentTranscript').textContent = 'Speaking...';
+          
+          // Handle translation for final text
+          if (msg.translation) {
+            fullTranslation += (fullTranslation ? ' ' : '') + msg.translation;
+            document.getElementById('fullTranslation').textContent = fullTranslation;
+            document.getElementById('currentTranslation').textContent = 'Translating...';
+            log('[live] Final translation received:', msg.translation);
+          } else {
+            log('[live] No translation received for final text');
+          }
           
           // Show AI buttons when we have a complete transcript
           if (fullTranscript.trim().length > 10) {
@@ -2398,9 +2509,19 @@
           // Partial text - show in current only
           currentPartial = msg.text;
           document.getElementById('currentTranscript').textContent = currentPartial || 'Listening...';
+          
+          // Handle partial translation
+          if (msg.translation) {
+            currentTranslation = msg.translation;
+            document.getElementById('currentTranslation').textContent = currentTranslation || 'Translating...';
+            log('[live] Partial translation received:', msg.translation);
+          } else {
+            log('[live] No translation received for partial text');
+          }
         }
         
-        log('[live] transcript_update: ' + msg.text + (msg.isFinal ? ' [FINAL]' : ' [PARTIAL]'));
+        log('[live] transcript_update: ' + msg.text + (msg.isFinal ? ' [FINAL]' : ' [PARTIAL]') + 
+            (msg.translation ? ' | Translation: ' + msg.translation : ''));
       });
 
       liveSocket.on('ready', () => { 
@@ -2413,8 +2534,8 @@
           showError(`Real-time streaming limit exceeded: ${err.message}`, 'streamResult');
           log(`Real-time streaming limit exceeded: ${err.message}`);
         } else {
-          showError('WebSocket error: ' + JSON.stringify(err), 'streamResult');
-          log('[live] error ' + JSON.stringify(err));
+        showError('WebSocket error: ' + JSON.stringify(err), 'streamResult');
+        log('[live] error ' + JSON.stringify(err));
         }
       });
 
@@ -2442,11 +2563,15 @@
         liveSessionId = null;
       }
       
-      // Reset transcripts
+      // Reset transcripts and translations
       fullTranscript = '';
       currentPartial = '';
+      fullTranslation = '';
+      currentTranslation = '';
       document.getElementById('fullTranscript').textContent = 'Complete transcript will appear here...';
       document.getElementById('currentTranscript').textContent = 'Current speech will appear here...';
+      document.getElementById('fullTranslation').textContent = 'Complete translation will appear here...';
+      document.getElementById('currentTranslation').textContent = 'Translation will appear here...';
       
       // Hide AI warning
       const warningElement = document.getElementById('streamAiLimitsWarning');
@@ -3170,7 +3295,11 @@
           const recordSourceSelect = document.getElementById('recordSourceLanguage');
           const recordTargetSelect = document.getElementById('recordTargetLanguage');
           
-          if (!sourceSelect || !targetSelect || !recordSourceSelect || !recordTargetSelect) {
+          // Real-time streaming form language selects
+          const streamSourceSelect = document.getElementById('streamSourceLanguage');
+          const streamTargetSelect = document.getElementById('streamTargetLanguage');
+          
+          if (!sourceSelect || !targetSelect || !recordSourceSelect || !recordTargetSelect || !streamSourceSelect || !streamTargetSelect) {
             log('Language select elements not found!');
             return;
           }
@@ -3180,6 +3309,8 @@
           targetSelect.innerHTML = '';
           recordSourceSelect.innerHTML = '';
           recordTargetSelect.innerHTML = '';
+          streamSourceSelect.innerHTML = '';
+          streamTargetSelect.innerHTML = '';
           
           // Add source languages
           let sourceCount = 0;
@@ -3201,6 +3332,13 @@
               recordOption.textContent = `${lang.flag} ${lang.name}`;
               if (lang.code === 'ha-NG') recordOption.selected = true; // Default to Hausa
               recordSourceSelect.appendChild(recordOption);
+              
+              // Real-time streaming form
+              const streamOption = document.createElement('option');
+              streamOption.value = lang.code;
+              streamOption.textContent = `${lang.flag} ${lang.name}`;
+              if (lang.code === 'ha-NG') streamOption.selected = true; // Default to Hausa
+              streamSourceSelect.appendChild(streamOption);
               
               sourceCount++;
               log(`Added source language: ${lang.name}`);
@@ -3227,6 +3365,13 @@
               recordOption.textContent = `${lang.flag} ${lang.name}`;
               if (lang.code === 'ha-NG') recordOption.selected = true; // Default to Hausa
               recordTargetSelect.appendChild(recordOption);
+              
+              // Real-time streaming form
+              const streamOption = document.createElement('option');
+              streamOption.value = lang.code;
+              streamOption.textContent = `${lang.flag} ${lang.name}`;
+              if (lang.code === 'ha-NG') streamOption.selected = true; // Default to Hausa
+              streamTargetSelect.appendChild(streamOption);
               
               targetCount++;
               log(`Added target language: ${lang.name}`);
@@ -3263,8 +3408,10 @@
       const targetSelect = document.getElementById('targetLanguage');
       const recordSourceSelect = document.getElementById('recordSourceLanguage');
       const recordTargetSelect = document.getElementById('recordTargetLanguage');
+      const streamSourceSelect = document.getElementById('streamSourceLanguage');
+      const streamTargetSelect = document.getElementById('streamTargetLanguage');
       
-      if (!sourceSelect || !targetSelect || !recordSourceSelect || !recordTargetSelect) {
+      if (!sourceSelect || !targetSelect || !recordSourceSelect || !recordTargetSelect || !streamSourceSelect || !streamTargetSelect) {
         log('Language select elements not found in fallback!');
         return;
       }
@@ -3274,6 +3421,8 @@
       targetSelect.innerHTML = '';
       recordSourceSelect.innerHTML = '';
       recordTargetSelect.innerHTML = '';
+      streamSourceSelect.innerHTML = '';
+      streamTargetSelect.innerHTML = '';
       
       // Add source languages
       defaultLanguages.forEach(lang => {
@@ -3291,6 +3440,13 @@
           recordOption.textContent = `${lang.flag} ${lang.name}`;
           if (lang.code === 'ha-NG') recordOption.selected = true; // Default to Hausa
           recordSourceSelect.appendChild(recordOption);
+          
+          // Real-time streaming form
+          const streamOption = document.createElement('option');
+          streamOption.value = lang.code;
+          streamOption.textContent = `${lang.flag} ${lang.name}`;
+          if (lang.code === 'ha-NG') streamOption.selected = true; // Default to Hausa
+          streamSourceSelect.appendChild(streamOption);
         }
       });
       
@@ -3310,6 +3466,13 @@
           recordOption.textContent = `${lang.flag} ${lang.name}`;
           if (lang.code === 'ha-NG') recordOption.selected = true; // Default to Hausa
           recordTargetSelect.appendChild(recordOption);
+          
+          // Real-time streaming form
+          const streamOption = document.createElement('option');
+          streamOption.value = lang.code;
+          streamOption.textContent = `${lang.flag} ${lang.name}`;
+          if (lang.code === 'ha-NG') streamOption.selected = true; // Default to Hausa
+          streamTargetSelect.appendChild(streamOption);
         }
       });
       
@@ -3340,6 +3503,39 @@
         document.getElementById('startMicBtn').addEventListener('click', startMicStream);
         document.getElementById('stopMicBtn').addEventListener('click', stopMicStream);
         document.getElementById('endSessionBtn').addEventListener('click', endSession);
+        
+        // Language change listeners for real-time streaming
+        document.getElementById('streamSourceLanguage').addEventListener('change', (e) => {
+          if (liveSocket && liveSocket.connected) {
+            const sourceLanguage = e.target.value;
+            const targetLanguage = document.getElementById('streamTargetLanguage').value;
+            updateLanguageLabels(sourceLanguage, targetLanguage);
+            
+            // Send language update to server
+            liveSocket.emit('update_languages', {
+              sourceLanguage: sourceLanguage,
+              targetLanguage: targetLanguage
+            });
+            
+            log('[live] Language updated - Source:', sourceLanguage, 'Target:', targetLanguage);
+          }
+        });
+        
+        document.getElementById('streamTargetLanguage').addEventListener('change', (e) => {
+          if (liveSocket && liveSocket.connected) {
+            const sourceLanguage = document.getElementById('streamSourceLanguage').value;
+            const targetLanguage = e.target.value;
+            updateLanguageLabels(sourceLanguage, targetLanguage);
+            
+            // Send language update to server
+            liveSocket.emit('update_languages', {
+              sourceLanguage: sourceLanguage,
+              targetLanguage: targetLanguage
+            });
+            
+            log('[live] Language updated - Source:', sourceLanguage, 'Target:', targetLanguage);
+          }
+        });
         document.getElementById('watchAdBtn').addEventListener('click', watchAd);
         document.getElementById('showPlansBtn').addEventListener('click', showSubscriptionTiers);
         

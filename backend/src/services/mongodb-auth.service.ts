@@ -350,7 +350,7 @@ export class MongoDBAuthService {
   private generateToken(user: IUser): string {
     return jwt.sign(
       { 
-        userId: user._id.toString(),
+        userId: (user._id as any).toString(),
         email: user.email,
         subscriptionTier: user.subscriptionTier
       },
@@ -365,7 +365,7 @@ export class MongoDBAuthService {
    */
   private convertToAuthUser(user: IUser): AuthUser {
     return {
-      id: user._id.toString(),
+      id: (user._id as any).toString(),
       email: user.email,
       name: user.name,
       subscriptionTier: user.subscriptionTier,

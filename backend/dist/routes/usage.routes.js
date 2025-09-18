@@ -47,4 +47,46 @@ router.post('/record-live-recording', mongodb_auth_1.authenticate, async (req, r
         });
     }
 });
+// Check real-time streaming usage
+router.post('/check-realtime-streaming', mongodb_auth_1.authenticate, async (req, res) => {
+    try {
+        const { requestedMinutes } = req.body;
+        if (!requestedMinutes || requestedMinutes <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid requestedMinutes'
+            });
+        }
+        const result = await usageService.checkRealTimeStreamingUsage(req.user.id, requestedMinutes);
+        res.json(result);
+    }
+    catch (error) {
+        console.error('Error checking real-time streaming usage:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+// Record real-time streaming usage
+router.post('/record-realtime-streaming', mongodb_auth_1.authenticate, async (req, res) => {
+    try {
+        const { minutes } = req.body;
+        if (!minutes || minutes <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid minutes'
+            });
+        }
+        await usageService.recordRealTimeStreamingUsage(req.user.id, minutes);
+        res.json({ success: true });
+    }
+    catch (error) {
+        console.error('Error recording real-time streaming usage:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
 exports.default = router;

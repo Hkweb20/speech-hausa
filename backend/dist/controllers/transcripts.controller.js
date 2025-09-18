@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transcribeUpload = transcribeUpload;
 exports.listTranscripts = listTranscripts;
@@ -13,7 +46,7 @@ async function transcribeUpload(req, res) {
     const file = req.file;
     if (!file)
         return res.status(400).json({ message: 'No file uploaded' });
-    const { sampleRateHertz, languageCode, encoding, source } = req.body || {};
+    const { sampleRateHertz, languageCode, encoding, source, targetLanguage } = req.body || {};
     const duration = file.buffer.length / (16000 * 2); // Estimate duration in seconds
     const durationMinutes = duration / 60; // Convert to minutes
     try {
@@ -84,6 +117,25 @@ async function transcribeUpload(req, res) {
         const userId = req.user?.id ?? 'anonymous';
         const now = new Date().toISOString();
         const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        // Perform translation if target language is different from source language
+        let translation = '';
+        if (targetLanguage && targetLanguage !== languageCode && transcript.trim()) {
+            try {
+                console.log(`Translating from ${languageCode} to ${targetLanguage}:`, transcript);
+                // Import translation service
+                const { translateText } = await Promise.resolve().then(() => __importStar(require('../services/translation.service')));
+                // Map language codes for translation service
+                const sourceLang = languageCode?.split('-')[0] || 'ha';
+                const targetLang = targetLanguage?.split('-')[0] || 'en';
+                const translationResult = await translateText(transcript, sourceLang, targetLang);
+                translation = translationResult.translatedText;
+                console.log('Translation result:', translation);
+            }
+            catch (error) {
+                console.error('Translation failed:', error);
+                // Continue without translation if it fails
+            }
+        }
         const t = {
             id,
             userId,
@@ -112,6 +164,7 @@ async function transcribeUpload(req, res) {
         }
         return res.json({
             transcript,
+            translation: translation || undefined,
             id,
             duration: actualDuration,
             isPremium: !!req.user

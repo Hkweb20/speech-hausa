@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 // import { GeminiAIService } from '../services/gemini-ai.service';
 import { logger } from '../config/logger';
-// import { UsageService } from '../services/usage.service';
+import { UsageService } from '../services/usage.service';
 
 // const geminiService = new GeminiAIService();
-// const usageService = new UsageService();
+const usageService = new UsageService();
 
 /**
  * Summarize transcribed text using Gemini AI

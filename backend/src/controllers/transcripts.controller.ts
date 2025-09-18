@@ -165,12 +165,12 @@ export async function transcribeUpload(req: AuthenticatedRequest, res: Response)
   }
 }
 
-export function listTranscripts(req: Request, res: Response) {
+export function listTranscripts(req: any, res: Response) {
   const userId = req.user?.id ?? 'stub-user-id';
   return res.json(transcriptsRepo.listByUser(userId));
 }
 
-export function getTranscript(req: Request, res: Response) {
+export function getTranscript(req: any, res: Response) {
   const t = transcriptsRepo.get(req.params.id);
   if (!t) return res.status(404).json({ message: 'Not found' });
   return res.json(t);

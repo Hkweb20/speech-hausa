@@ -139,7 +139,7 @@ export async function updateUser(req: AdminRequest, res: Response) {
 
     // Log the admin action
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'update_user',
       resource: 'user',
@@ -199,7 +199,7 @@ export async function resetUserDailyLimits(req: AdminRequest, res: Response) {
 
     // Log the admin action
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'reset_user_limits',
       resource: 'user_limits',
@@ -255,7 +255,7 @@ export async function resetUserMonthlyLimits(req: AdminRequest, res: Response) {
 
     // Log the admin action
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'reset_user_limits',
       resource: 'user_limits',
@@ -290,7 +290,7 @@ export async function resetUserMonthlyLimits(req: AdminRequest, res: Response) {
 export async function upgradeUser(req: AdminRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { subscriptionTier, subscriptionStatus, subscriptionExpiresAt, customLimits } = req.body;
+    const { subscriptionTier, subscriptionStatus, subscriptionExpiresAt, customLimits, customLimitsOption } = req.body;
     
     const user = await User.findById(id);
     if (!user) {
@@ -315,9 +315,9 @@ export async function upgradeUser(req: AdminRequest, res: Response) {
       updateData.subscriptionExpiresAt = new Date(subscriptionExpiresAt);
     }
 
-    // Apply custom limits if provided
-    if (customLimits) {
-      // Custom limits override the tier defaults
+    // Handle custom limits based on the option selected
+    if (customLimitsOption === 'set' && customLimits) {
+      // Set new custom limits
       updateData.customLimits = {
         dailyMinutes: customLimits.dailyMinutes,
         monthlyMinutes: customLimits.monthlyMinutes,
@@ -335,6 +335,13 @@ export async function upgradeUser(req: AdminRequest, res: Response) {
         prioritySupport: customLimits.prioritySupport,
         apiAccess: customLimits.apiAccess
       };
+    } else if (customLimitsOption === 'keep') {
+      // Keep existing custom limits (don't modify customLimits field)
+      // The existing customLimits will remain unchanged
+    } else {
+      // Clear custom limits (default behavior for 'clear' option or no option specified)
+      // This ensures the user gets the new tier's default limits
+      updateData.customLimits = null;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -345,7 +352,7 @@ export async function upgradeUser(req: AdminRequest, res: Response) {
 
     // Log the admin action
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'update_user',
       resource: 'user',
@@ -420,7 +427,7 @@ export async function bulkUpgradeUsers(req: AdminRequest, res: Response) {
 
     // Log the admin action
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'update_user',
       resource: 'user',
@@ -513,7 +520,7 @@ export async function deleteUser(req: AdminRequest, res: Response) {
 
     // Log the admin action before deletion
     await AdminLog.create({
-      adminId: req.admin!._id.toString(),
+      adminId: (req.admin!._id as any).toString(),
       adminEmail: req.admin!.email,
       action: 'delete_user',
       resource: 'user',

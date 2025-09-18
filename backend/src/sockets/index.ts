@@ -1,10 +1,11 @@
 import type { Server, Socket } from 'socket.io';
 import { GcpStreamingTranscriptionService } from '../services/gcp-streaming.service';
-import { audioChunkSchema, endSessionSchema, joinSessionSchema } from '../utils/validators';
+import { audioChunkSchema, endSessionSchema, joinSessionSchema, updateLanguagesSchema } from '../utils/validators';
 import { logger } from '../config/logger';
 import { transcriptsRepo } from '../repositories/transcripts.repository';
 import { Transcript } from '../types/domain';
 import { UsageService } from '../services/usage.service';
+import { translateText } from '../services/translation.service';
 
 const NAMESPACE = '/transcription';
 const MAX_CHUNK_BYTES = 512 * 1024; // 512KB per message cap
@@ -21,6 +22,7 @@ export function initSockets(io: Server) {
   const sessionLastEmitAt = new Map<string, number>();
   const sessionStartTimes = new Map<string, number>();
   const sessionUsers = new Map<string, string>();
+  const sessionLanguages = new Map<string, { sourceLanguage: string; targetLanguage: string }>();
   const PARTIAL_MIN_INTERVAL_MS = 300;
 
   ns.use((socket, next) => {
@@ -42,12 +44,14 @@ export function initSockets(io: Server) {
       if (!parsed.success) {
         return socket.emit('error', { code: 'BAD_REQUEST', message: 'Invalid join_session payload' });
       }
-      const { sessionId: providedId, mode, userId } = parsed.data;
+      const { sessionId: providedId, mode, userId, sourceLanguage, targetLanguage } = parsed.data;
       
       logger.info({ 
         sessionId: providedId, 
         mode, 
         userId, 
+        sourceLanguage,
+        targetLanguage,
         socketId: socket.id,
         handshakeQuery: socket.handshake.query 
       }, 'WebSocket join_session received');
@@ -84,9 +88,20 @@ export function initSockets(io: Server) {
         }
       }
 
+      // Store language information for the session
+      const defaultSourceLanguage = sourceLanguage || 'ha-NG';
+      const defaultTargetLanguage = targetLanguage || 'en-US';
+      
       let sessionId = providedId;
       if (!sessionId) {
-        const res = service.startSession(userId || 'stub-user-id', mode, (u) => {
+        // Store language information BEFORE creating the session
+        const tempSessionId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        sessionLanguages.set(tempSessionId, {
+          sourceLanguage: defaultSourceLanguage,
+          targetLanguage: defaultTargetLanguage
+        });
+        
+        const res = service.startSession(userId || 'stub-user-id', mode, async (u) => {
           // Deduplicate partials to avoid spammy repeats
           const last = sessionPartials.get(u.sessionId) || '';
           if (u.isFinal) {
@@ -95,7 +110,49 @@ export function initSockets(io: Server) {
             sessionStableFinal.set(u.sessionId, newStable);
             sessionPartials.delete(u.sessionId);
             sessionLastEmitAt.delete(u.sessionId);
-            ns.to(`session:${u.sessionId}`).emit('transcript_update', { sessionId: u.sessionId, text: u.text, fullText: newStable, isFinal: true });
+            
+            // Get language settings for this session
+            const languages = sessionLanguages.get(u.sessionId);
+            let translation = '';
+            
+            logger.info({ 
+              sessionId: u.sessionId, 
+              languages, 
+              text: u.text, 
+              sessionLanguagesSize: sessionLanguages.size,
+              allSessionLanguages: Array.from(sessionLanguages.entries())
+            }, 'Translation check for final text');
+            
+            // Perform translation if languages are different and text exists
+            if (languages && languages.sourceLanguage !== languages.targetLanguage && u.text.trim()) {
+              try {
+                const sourceLang = languages.sourceLanguage?.split('-')[0] || 'ha';
+                const targetLang = languages.targetLanguage?.split('-')[0] || 'en';
+                logger.info({ sessionId: u.sessionId, sourceLang, targetLang, originalText: u.text }, 'Starting translation for final text');
+                const translationResult = await translateText(u.text, sourceLang, targetLang);
+                translation = translationResult.translatedText;
+                logger.info({ sessionId: u.sessionId, sourceLang, targetLang, originalText: u.text, translation }, 'Real-time translation completed');
+              } catch (error) {
+                logger.error({ error, sessionId: u.sessionId, text: u.text }, 'Real-time translation failed');
+              }
+            } else {
+              logger.info({ 
+                sessionId: u.sessionId, 
+                hasLanguages: !!languages, 
+                sourceLanguage: languages?.sourceLanguage, 
+                targetLanguage: languages?.targetLanguage, 
+                languagesMatch: languages?.sourceLanguage === languages?.targetLanguage,
+                hasText: !!u.text.trim()
+              }, 'Translation skipped for final text');
+            }
+            
+            ns.to(`session:${u.sessionId}`).emit('transcript_update', { 
+              sessionId: u.sessionId, 
+              text: u.text, 
+              fullText: newStable, 
+              translation: translation,
+              isFinal: true 
+            });
             return;
           }
           if (u.text && u.text !== last) {
@@ -107,10 +164,64 @@ export function initSockets(io: Server) {
             sessionPartials.set(u.sessionId, u.text);
             const stable = sessionStableFinal.get(u.sessionId) || '';
             const fullText = `${stable}${stable ? ' ' : ''}${u.text}`.trim();
-            ns.to(`session:${u.sessionId}`).emit('transcript_update', { sessionId: u.sessionId, text: u.text, fullText, isFinal: false });
+            
+            // Get language settings for this session
+            const languages = sessionLanguages.get(u.sessionId);
+            let translation = '';
+            
+            logger.info({ 
+              sessionId: u.sessionId, 
+              languages, 
+              text: u.text, 
+              sessionLanguagesSize: sessionLanguages.size
+            }, 'Translation check for partial text');
+            
+            // Perform translation for partial text if languages are different
+            if (languages && languages.sourceLanguage !== languages.targetLanguage && u.text.trim()) {
+              try {
+                const sourceLang = languages.sourceLanguage?.split('-')[0] || 'ha';
+                const targetLang = languages.targetLanguage?.split('-')[0] || 'en';
+                logger.info({ sessionId: u.sessionId, sourceLang, targetLang, originalText: u.text }, 'Starting translation for partial text');
+                const translationResult = await translateText(u.text, sourceLang, targetLang);
+                translation = translationResult.translatedText;
+                logger.info({ sessionId: u.sessionId, sourceLang, targetLang, originalText: u.text, translation }, 'Real-time partial translation completed');
+              } catch (error) {
+                logger.error({ error, sessionId: u.sessionId, text: u.text }, 'Real-time partial translation failed');
+              }
+            } else {
+              logger.info({ 
+                sessionId: u.sessionId, 
+                hasLanguages: !!languages, 
+                sourceLanguage: languages?.sourceLanguage, 
+                targetLanguage: languages?.targetLanguage, 
+                languagesMatch: languages?.sourceLanguage === languages?.targetLanguage,
+                hasText: !!u.text.trim()
+              }, 'Translation skipped for partial text');
+            }
+            
+            ns.to(`session:${u.sessionId}`).emit('transcript_update', { 
+              sessionId: u.sessionId, 
+              text: u.text, 
+              fullText, 
+              translation: translation,
+              isFinal: false 
+            });
           }
         });
         sessionId = res.sessionId;
+        
+        // Move language information to the actual session ID
+        const languageInfo = sessionLanguages.get(tempSessionId);
+        if (languageInfo) {
+          sessionLanguages.set(sessionId, languageInfo);
+          sessionLanguages.delete(tempSessionId);
+        }
+      } else {
+        // Store language information for existing session
+        sessionLanguages.set(sessionId, {
+          sourceLanguage: defaultSourceLanguage,
+          targetLanguage: defaultTargetLanguage
+        });
       }
 
       // Track session start time and user for usage recording
@@ -187,6 +298,40 @@ export function initSockets(io: Server) {
         // Store the interval ID so we can clear it later
         (socket.data as any).usageCheckInterval = usageCheckInterval;
       }
+    });
+
+    // Handle language updates during active sessions
+    socket.on('update_languages', (payload) => {
+      const parsed = updateLanguagesSchema.safeParse(payload ?? {});
+      if (!parsed.success) {
+        return socket.emit('error', { code: 'BAD_REQUEST', message: 'Invalid update_languages payload' });
+      }
+      
+      const { sourceLanguage, targetLanguage } = parsed.data;
+      const sessionId = (socket.data as any).sessionId;
+      
+      if (!sessionId) {
+        return socket.emit('error', { code: 'NO_SESSION', message: 'No active session found' });
+      }
+      
+      // Update language settings for the session
+      sessionLanguages.set(sessionId, {
+        sourceLanguage,
+        targetLanguage
+      });
+      
+      logger.info({ 
+        sessionId, 
+        sourceLanguage, 
+        targetLanguage, 
+        socketId: socket.id 
+      }, 'Language settings updated for session');
+      
+      socket.emit('languages_updated', { 
+        sessionId, 
+        sourceLanguage, 
+        targetLanguage 
+      });
     });
 
     socket.on('audio_chunk', (payload) => {
@@ -266,6 +411,7 @@ export function initSockets(io: Server) {
         // Clean up session tracking
         sessionStartTimes.delete(sessionId);
         sessionUsers.delete(sessionId);
+        sessionLanguages.delete(sessionId);
         
         // Clear usage check interval if it exists
         const usageCheckInterval = (socket.data as any).usageCheckInterval;
@@ -323,6 +469,7 @@ export function initSockets(io: Server) {
         // Clean up session tracking
         sessionStartTimes.delete(sid);
         sessionUsers.delete(sid);
+        sessionLanguages.delete(sid);
         
         // Clear usage check interval if it exists
         const usageCheckInterval = (socket.data as any).usageCheckInterval;

@@ -4,7 +4,9 @@ import {
   getSubscriptionTiers, 
   updateSubscriptionTier, 
   updateAllSubscriptionTiers,
-  resetAllDailyLimits 
+  resetAllDailyLimits,
+  getDailyResetStatus,
+  triggerDailyReset
 } from '../controllers/admin-limits.controller';
 import {
   getAllUsers,
@@ -65,6 +67,16 @@ router.put('/limits/subscription-tiers',
 router.post('/limits/reset-all-daily', 
   requireRole(['super_admin', 'admin']), 
   resetAllDailyLimits
+);
+
+// Daily reset service management
+router.get('/limits/daily-reset/status', 
+  requireRole(['super_admin', 'admin']), 
+  getDailyResetStatus
+);
+router.post('/limits/daily-reset/trigger', 
+  requireRole(['super_admin', 'admin']), 
+  triggerDailyReset
 );
 
 // User management

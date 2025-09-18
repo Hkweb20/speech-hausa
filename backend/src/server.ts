@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { logger } from './config/logger';
 import { databaseService } from './config/database';
 import { initSockets } from './sockets';
+import { dailyResetService } from './services/daily-reset.service';
 
 async function startServer() {
   try {
@@ -18,11 +19,15 @@ async function startServer() {
 
     server.listen(env.PORT, () => {
       logger.info({ port: env.PORT }, 'Server listening');
+      
+      // Start the daily reset service
+      dailyResetService.start();
     });
 
     // Graceful shutdown
     process.on('SIGTERM', async () => {
       logger.info('SIGTERM received, shutting down gracefully');
+      dailyResetService.stop();
       server.close(() => {
         logger.info('Server closed');
         databaseService.disconnect().then(() => {
@@ -33,6 +38,7 @@ async function startServer() {
 
     process.on('SIGINT', async () => {
       logger.info('SIGINT received, shutting down gracefully');
+      dailyResetService.stop();
       server.close(() => {
         logger.info('Server closed');
         databaseService.disconnect().then(() => {

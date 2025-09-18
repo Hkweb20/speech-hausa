@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TranslationService = void 0;
+exports.translateText = translateText;
 const v2_1 = require("@google-cloud/translate/build/src/v2");
 const text_to_speech_1 = require("@google-cloud/text-to-speech");
 const logger_1 = require("../config/logger");
@@ -8,6 +9,40 @@ class TranslationService {
     constructor() {
         this.translate = new v2_1.Translate();
         this.ttsClient = new text_to_speech_1.TextToSpeechClient();
+    }
+    /**
+     * Translate text from any language to any target language
+     */
+    async translateTextFromTo(text, sourceLanguage, targetLanguage) {
+        try {
+            if (!text || text.trim().length === 0) {
+                throw new Error('Text is required for translation');
+            }
+            // Validate languages
+            const supportedLanguages = ['ha', 'yo', 'ig', 'ar', 'en', 'fr'];
+            if (!supportedLanguages.includes(sourceLanguage)) {
+                throw new Error(`Unsupported source language: ${sourceLanguage}`);
+            }
+            if (!supportedLanguages.includes(targetLanguage)) {
+                throw new Error(`Unsupported target language: ${targetLanguage}`);
+            }
+            logger_1.logger.info({ textLength: text.length, sourceLanguage, targetLanguage }, 'Starting text translation');
+            const [translation] = await this.translate.translate(text, {
+                from: sourceLanguage,
+                to: targetLanguage
+            });
+            logger_1.logger.info({
+                originalLength: text.length,
+                translatedLength: translation.length,
+                sourceLanguage,
+                targetLanguage
+            }, 'Text translated successfully');
+            return { translatedText: translation };
+        }
+        catch (error) {
+            logger_1.logger.error({ error, text: text.substring(0, 100), sourceLanguage, targetLanguage }, 'Error translating text');
+            throw new Error('Failed to translate text');
+        }
     }
     /**
      * Translate text from Hausa to target language
@@ -399,9 +434,18 @@ class TranslationService {
         const languageNames = {
             'en': 'English',
             'fr': 'French',
-            'ar': 'Arabic'
+            'ar': 'Arabic',
+            'ha': 'Hausa',
+            'yo': 'Yoruba',
+            'ig': 'Igbo'
         };
         return languageNames[languageCode] || 'English';
     }
 }
 exports.TranslationService = TranslationService;
+// Create a singleton instance
+const translationService = new TranslationService();
+// Export standalone function for easy importing
+async function translateText(text, sourceLanguage, targetLanguage) {
+    return translationService.translateTextFromTo(text, sourceLanguage, targetLanguage);
+}

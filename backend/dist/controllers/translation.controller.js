@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSupportedLanguages = exports.getAvailableVoices = exports.translateAndSpeak = exports.textToSpeech = exports.translateText = void 0;
+exports.processVoiceTranslation = exports.getSupportedLanguages = exports.getAvailableVoices = exports.translateAndSpeak = exports.textToSpeech = exports.translateText = void 0;
 const translation_service_1 = require("../services/translation.service");
 const usage_service_1 = require("../services/usage.service");
 const logger_1 = require("../config/logger");
@@ -34,28 +34,28 @@ const translateText = async (req, res) => {
                 code: 'TEXT_TOO_SHORT'
             });
         }
-        // Check usage limits for authenticated users
+        // Check translation usage limits for authenticated users
         if (userId !== 'anonymous') {
-            const usageCheck = await usageService.checkAIUsage(userId, 1);
-            if (!usageCheck.allowed) {
+            const translationCheck = await usageService.checkTranslationUsage(userId, 0.1); // Check if any time remaining
+            if (!translationCheck.allowed) {
                 return res.status(403).json({
                     success: false,
                     error: 'Translation usage limit exceeded',
                     code: 'TRANSLATION_USAGE_LIMIT_EXCEEDED',
                     details: {
-                        reason: usageCheck.reason,
-                        remainingRequests: usageCheck.remainingRequests,
-                        tier: usageCheck.tier,
-                        resetTime: usageCheck.resetTime
+                        reason: translationCheck.reason,
+                        remainingMinutes: translationCheck.remainingMinutes,
+                        tier: translationCheck.tier,
+                        resetTime: translationCheck.resetTime
                     }
                 });
             }
         }
         logger_1.logger.info({ userId, textLength: text.length, targetLanguage }, 'Starting text translation');
         const translatedText = await translationService.translateText(text, targetLanguage);
-        // Record usage for authenticated users
+        // Record translation usage for authenticated users
         if (userId !== 'anonymous') {
-            await usageService.recordAIUsage(userId, 1);
+            await usageService.recordTranslationUsage(userId, 0.1); // Record minimal usage for text translation
         }
         res.json({
             success: true,
@@ -105,28 +105,28 @@ const textToSpeech = async (req, res) => {
                 code: 'TEXT_TOO_SHORT'
             });
         }
-        // Check usage limits for authenticated users
+        // Check translation usage limits for authenticated users
         if (userId !== 'anonymous') {
-            const usageCheck = await usageService.checkAIUsage(userId, 1);
-            if (!usageCheck.allowed) {
+            const translationCheck = await usageService.checkTranslationUsage(userId, 0.1); // Check if any time remaining
+            if (!translationCheck.allowed) {
                 return res.status(403).json({
                     success: false,
-                    error: 'TTS usage limit exceeded',
-                    code: 'TTS_USAGE_LIMIT_EXCEEDED',
+                    error: 'Translation usage limit exceeded',
+                    code: 'TRANSLATION_USAGE_LIMIT_EXCEEDED',
                     details: {
-                        reason: usageCheck.reason,
-                        remainingRequests: usageCheck.remainingRequests,
-                        tier: usageCheck.tier,
-                        resetTime: usageCheck.resetTime
+                        reason: translationCheck.reason,
+                        remainingMinutes: translationCheck.remainingMinutes,
+                        tier: translationCheck.tier,
+                        resetTime: translationCheck.resetTime
                     }
                 });
             }
         }
         logger_1.logger.info({ userId, textLength: text.length, languageCode, voiceName }, 'Starting text-to-speech conversion');
         const audioBuffer = await translationService.textToSpeech(text, languageCode, voiceName);
-        // Record usage for authenticated users
+        // Record translation usage for authenticated users
         if (userId !== 'anonymous') {
-            await usageService.recordAIUsage(userId, 1);
+            await usageService.recordTranslationUsage(userId, 0.1); // Record minimal usage for TTS
         }
         // Set appropriate headers for audio response
         res.setHeader('Content-Type', 'audio/mpeg');
@@ -172,28 +172,28 @@ const translateAndSpeak = async (req, res) => {
                 code: 'TEXT_TOO_SHORT'
             });
         }
-        // Check usage limits for authenticated users (counts as 2 requests: translate + TTS)
+        // Check translation usage limits for authenticated users
         if (userId !== 'anonymous') {
-            const usageCheck = await usageService.checkAIUsage(userId, 2);
-            if (!usageCheck.allowed) {
+            const translationCheck = await usageService.checkTranslationUsage(userId, 0.1); // Check if any time remaining
+            if (!translationCheck.allowed) {
                 return res.status(403).json({
                     success: false,
-                    error: 'Translation pipeline usage limit exceeded',
-                    code: 'TRANSLATION_PIPELINE_USAGE_LIMIT_EXCEEDED',
+                    error: 'Translation usage limit exceeded',
+                    code: 'TRANSLATION_USAGE_LIMIT_EXCEEDED',
                     details: {
-                        reason: usageCheck.reason,
-                        remainingRequests: usageCheck.remainingRequests,
-                        tier: usageCheck.tier,
-                        resetTime: usageCheck.resetTime
+                        reason: translationCheck.reason,
+                        remainingMinutes: translationCheck.remainingMinutes,
+                        tier: translationCheck.tier,
+                        resetTime: translationCheck.resetTime
                     }
                 });
             }
         }
         logger_1.logger.info({ userId, textLength: text.length, targetLanguage, voiceName }, 'Starting translation pipeline');
         const result = await translationService.translateAndSpeak(text, targetLanguage, voiceName);
-        // Record usage for authenticated users (2 requests)
+        // Record translation usage for authenticated users
         if (userId !== 'anonymous') {
-            await usageService.recordAIUsage(userId, 2);
+            await usageService.recordTranslationUsage(userId, 0.1); // Record minimal usage for translation pipeline
         }
         // Set appropriate headers for audio response
         res.setHeader('Content-Type', 'application/json');
@@ -303,3 +303,68 @@ const getSupportedLanguages = async (req, res) => {
     }
 };
 exports.getSupportedLanguages = getSupportedLanguages;
+/**
+ * Process voice translation with duration tracking
+ */
+const processVoiceTranslation = async (req, res) => {
+    try {
+        const { audioData, targetLanguage, voiceName, duration } = req.body;
+        const userId = req.user?.id || 'anonymous';
+        if (!audioData) {
+            return res.status(400).json({
+                success: false,
+                error: 'Audio data is required',
+                code: 'MISSING_AUDIO_DATA'
+            });
+        }
+        if (!targetLanguage || !['en', 'fr', 'ar'].includes(targetLanguage)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Valid target language is required (en, fr, ar)',
+                code: 'INVALID_LANGUAGE'
+            });
+        }
+        const durationMinutes = duration ? duration / 60 : 0.1; // Convert seconds to minutes
+        // Check translation usage limits for authenticated users
+        if (userId !== 'anonymous') {
+            const translationCheck = await usageService.checkTranslationUsage(userId, durationMinutes);
+            if (!translationCheck.allowed) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Translation usage limit exceeded',
+                    code: 'TRANSLATION_USAGE_LIMIT_EXCEEDED',
+                    details: {
+                        reason: translationCheck.reason,
+                        remainingMinutes: translationCheck.remainingMinutes,
+                        tier: translationCheck.tier,
+                        resetTime: translationCheck.resetTime
+                    }
+                });
+            }
+        }
+        logger_1.logger.info({ userId, durationMinutes, targetLanguage }, 'Starting voice translation');
+        // Process the audio data (this would need to be implemented in translation service)
+        // For now, we'll simulate the process
+        const result = await translationService.translateAndSpeak('Simulated text', targetLanguage, voiceName);
+        // Record translation usage for authenticated users
+        if (userId !== 'anonymous') {
+            await usageService.recordTranslationUsage(userId, durationMinutes);
+        }
+        res.json({
+            success: true,
+            originalText: 'Transcribed text from audio',
+            translatedText: result.translatedText,
+            audioUrl: result.audioUrl,
+            duration: durationMinutes
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Voice translation failed');
+        res.status(500).json({
+            success: false,
+            error: 'Voice translation failed',
+            code: 'VOICE_TRANSLATION_FAILED'
+        });
+    }
+};
+exports.processVoiceTranslation = processVoiceTranslation;
