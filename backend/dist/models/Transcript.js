@@ -73,6 +73,16 @@ const TranscriptSchema = new mongoose_1.Schema({
     pointsSpent: { type: Number, default: 0 },
     tags: [{ type: String }],
     isCloudSynced: { type: Boolean, default: false },
+    // Mobile sync fields
+    localId: { type: String, index: true },
+    version: { type: Number, default: 1 },
+    syncStatus: {
+        type: String,
+        enum: ['synced', 'pending', 'conflict'],
+        default: 'synced',
+        index: true
+    },
+    lastModified: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });

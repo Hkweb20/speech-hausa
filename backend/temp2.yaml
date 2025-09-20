@@ -1,0 +1,571 @@
+  # Mobile-Specific Endpoints
+  /api/mobile/health:
+    get:
+      summary: Mobile health check
+      description: |
+        Mobile-specific health check endpoint that returns additional mobile service status.
+      operationId: getMobileHealth
+      tags: [Mobile]
+      security: []
+      responses:
+        '200':
+          description: Mobile services status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: "connected"
+                      storage:
+                        type: string
+                        example: "available"
+                      transcription:
+                        type: string
+                        example: "available"
+                  mobile:
+                    type: object
+                    properties:
+                      syncEnabled:
+                        type: boolean
+                        example: true
+                      offlineMode:
+                        type: boolean
+                        example: true
+                      pushNotifications:
+                        type: boolean
+                        example: true
+
+  /api/mobile/config:
+    get:
+      summary: Get mobile app configuration
+      description: |
+        Get mobile app configuration including features, limits, and API settings.
+      operationId: getMobileConfig
+      tags: [Mobile]
+      security: []
+      responses:
+        '200':
+          description: Mobile configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      version:
+                        type: string
+                        example: "1.0.0"
+                      minVersion:
+                        type: string
+                        example: "1.0.0"
+                      features:
+                        type: object
+                        properties:
+                          offlineMode:
+                            type: boolean
+                            example: true
+                          realTimeSync:
+                            type: boolean
+                            example: true
+                          pushNotifications:
+                            type: boolean
+                            example: true
+                          backgroundSync:
+                            type: boolean
+                            example: true
+                          maxOfflineTranscripts:
+                            type: integer
+                            example: 100
+                          maxFileSize:
+                            type: integer
+                            example: 52428800
+                          supportedFormats:
+                            type: array
+                            items:
+                              type: string
+                            example: ["wav", "mp3", "m4a", "webm"]
+                          supportedLanguages:
+                            type: array
+                            items:
+                              type: string
+                            example: ["ha-NG", "en-US", "fr-FR", "ar"]
+                          syncInterval:
+                            type: integer
+                            example: 30000
+                          retryAttempts:
+                            type: integer
+                            example: 3
+                      api:
+                        type: object
+                        properties:
+                          baseUrl:
+                            type: string
+                            example: "http://localhost:4000"
+                          timeout:
+                            type: integer
+                            example: 30000
+                          retryDelay:
+                            type: integer
+                            example: 1000
+                      user:
+                        type: object
+                        nullable: true
+                        properties:
+                          id:
+                            type: string
+                          subscriptionTier:
+                            type: string
+                          limits:
+                            type: object
+                            properties:
+                              dailyUploads:
+                                type: integer
+                              maxFileDuration:
+                                type: integer
+
+  /api/mobile/offline/transcripts:
+    get:
+      summary: Get offline transcripts for sync
+      description: |
+        Get transcripts for offline synchronization. Supports incremental sync with timestamp filtering.
+      operationId: getOfflineTranscripts
+      tags: [Mobile]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: since
+          in: query
+          description: ISO timestamp for incremental sync
+          required: false
+          schema:
+            type: string
+            format: date-time
+            example: "2025-01-01T00:00:00.000Z"
+        - name: limit
+          in: query
+          description: Maximum number of transcripts to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Offline transcripts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      transcripts:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MobileTranscript'
+                      syncTimestamp:
+                        type: string
+                        format: date-time
+                      hasMore:
+                        type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/mobile/offline/sync:
+    post:
+      summary: Sync offline transcripts
+      description: |
+        Bulk sync offline-created transcripts to the server. Handles conflict resolution.
+      operationId: syncOfflineTranscripts
+      tags: [Mobile]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transcripts]
+              properties:
+                transcripts:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OfflineTranscript'
+      responses:
+        '200':
+          description: Transcripts synced successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      synced:
+                        type: integer
+                        example: 5
+                      conflicts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            localId:
+                              type: string
+                            serverId:
+                              type: string
+                            conflict:
+                              type: string
+                            serverVersion:
+                              type: integer
+                            clientVersion:
+                              type: integer
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            localId:
+                              type: string
+                            error:
+                              type: string
+                      syncTimestamp:
+                        type: string
+                        format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/mobile/sync/status:
+    get:
+      summary: Get sync status
+      description: |
+        Get current synchronization status including pending items and conflicts.
+      operationId: getSyncStatus
+      tags: [Mobile]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sync status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      lastSync:
+                        type: string
+                        format: date-time
+                      totalTranscripts:
+                        type: integer
+                        example: 150
+                      pendingSync:
+                        type: integer
+                        example: 0
+                      conflicts:
+                        type: integer
+                        example: 0
+                      lastModified:
+                        type: string
+                        format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/mobile/sync/resolve-conflicts:
+    post:
+      summary: Resolve sync conflicts
+      description: |
+        Resolve synchronization conflicts between client and server data.
+      operationId: resolveSyncConflicts
+      tags: [Mobile]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conflicts]
+              properties:
+                conflicts:
+                  type: array
+                  items:
+                    type: object
+                    required: [localId, serverId, resolution]
+                    properties:
+                      localId:
+                        type: string
+                      serverId:
+                        type: string
+                      resolution:
+                        type: string
+                        enum: [use_client, use_server, merge]
+                      data:
+                        type: object
+      responses:
+        '200':
+          description: Conflicts resolved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      resolved:
+                        type: integer
+                        example: 3
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            localId:
+                              type: string
+                            error:
+                              type: string
+                      syncTimestamp:
+                        type: string
+                        format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Push Notification Endpoints
+  /api/push/register-token:
+    post:
+      summary: Register device token for push notifications
+      description: |
+        Register a device token to receive push notifications.
+      operationId: registerDeviceToken
+      tags: [Push Notifications]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, platform]
+              properties:
+                token:
+                  type: string
+                  description: FCM device token
+                  example: "fcm_device_token_here"
+                platform:
+                  type: string
+                  enum: [ios, android]
+                  description: Device platform
+      responses:
+        '200':
+          description: Device token registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Device token registered successfully"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/push/unregister-token:
+    delete:
+      summary: Unregister device token
+      description: |
+        Unregister a device token to stop receiving push notifications.
+      operationId: unregisterDeviceToken
+      tags: [Push Notifications]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: FCM device token to unregister
+      responses:
+        '200':
+          description: Device token unregistered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Device token unregistered successfully"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/push/tokens:
+    get:
+      summary: Get user's device tokens
+      description: |
+        Get all registered device tokens for the authenticated user.
+      operationId: getUserTokens
+      tags: [Push Notifications]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Device tokens retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      tokens:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            platform:
+                              type: string
+                              enum: [ios, android]
+                            lastActive:
+                              type: string
+                              format: date-time
+                            token:
+                              type: string
+                              description: Masked token for security
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/push/test:
+    post:
+      summary: Send test notification
+      description: |
+        Send a test push notification to the user's registered devices.
+      operationId: sendTestNotification
+      tags: [Push Notifications]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title:
+                  type: string
+                  description: Notification title
+                  example: "Test Notification"
+                body:
+                  type: string
+                  description: Notification body
+                  example: "This is a test notification"
+      responses:
+        '200':
+          description: Test notification sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Test notification sent"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+tags:
+  - name: Authentication
+    description: User authentication and profile management
+  - name: Subscription
+    description: Subscription tier management
+  - name: Points
+    description: Points system and micro-transactions
+  - name: Transcription
+    description: Audio transcription services
+  - name: Transcripts
+    description: Transcript management
+  - name: AI Processing
+    description: AI-powered text summarization and social media formatting
+  - name: Translation
+    description: Hausa text translation and text-to-speech services
+  - name: Mobile
+    description: Mobile-specific endpoints for offline sync and app configuration
+  - name: Push Notifications
+    description: Push notification management for mobile devices

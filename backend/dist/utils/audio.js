@@ -12,15 +12,24 @@ const fs_1 = require("fs");
 if (ffmpeg_static_1.default) {
     fluent_ffmpeg_1.default.setFfmpegPath(ffmpeg_static_1.default);
 }
-async function normalizeToLinear16Mono16k(input) {
+async function normalizeToLinear16Mono16k(input, originalFormat) {
     console.log('Audio normalization input size:', input.length, 'bytes');
+    console.log('Original format:', originalFormat || 'unknown');
     const inPath = (0, path_1.join)((0, os_1.tmpdir)(), `in-${Date.now()}-${Math.random().toString(36).slice(2)}.bin`);
     const outPath = (0, path_1.join)((0, os_1.tmpdir)(), `out-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`);
     (0, fs_1.writeFileSync)(inPath, input);
     console.log('Audio normalization input file written to:', inPath);
     return new Promise((resolve, reject) => {
-        (0, fluent_ffmpeg_1.default)(inPath)
-            .inputOptions(['-f', 'webm']) // Specify input format for webm files
+        const ffmpegCommand = (0, fluent_ffmpeg_1.default)(inPath);
+        // Only specify input format if we know it, otherwise let FFmpeg auto-detect
+        if (originalFormat) {
+            console.log('Using specified format:', originalFormat);
+            ffmpegCommand.inputOptions(['-f', originalFormat]);
+        }
+        else {
+            console.log('Auto-detecting audio format');
+        }
+        ffmpegCommand
             .audioChannels(1)
             .audioFrequency(16000)
             .toFormat('wav')
@@ -51,7 +60,16 @@ async function normalizeToLinear16Mono16k(input) {
                 (0, fs_1.unlinkSync)(outPath);
             }
             catch { }
-            reject(err);
+            // Provide more helpful error messages
+            if (err.message.includes('Invalid data found when processing input')) {
+                reject(new Error(`Unsupported audio format. Please try uploading a different audio file. Supported formats: MP3, WAV, M4A, WebM, OGG, FLAC. Original format: ${originalFormat || 'unknown'}`));
+            }
+            else if (err.message.includes('No such file or directory')) {
+                reject(new Error('Audio file not found or corrupted. Please try uploading again.'));
+            }
+            else {
+                reject(new Error(`Audio processing failed: ${err.message}`));
+            }
         })
             .save(outPath);
     });

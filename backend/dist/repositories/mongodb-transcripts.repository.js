@@ -235,6 +235,154 @@ class MongoDBTranscriptsRepositoryImpl {
             isLocal: !mongoTranscript.isCloudSynced
         };
     }
+    // Mobile sync methods
+    async getOfflineTranscripts(userId, since, limit) {
+        try {
+            const transcripts = await Transcript_1.Transcript.find({
+                userId,
+                updatedAt: { $gt: since }
+            })
+                .sort({ updatedAt: -1 })
+                .limit(limit)
+                .lean();
+            return transcripts.map(this.mapToDomain);
+        }
+        catch (error) {
+            console.error('Error getting offline transcripts:', error);
+            throw error;
+        }
+    }
+    async bulkSyncTranscripts(userId, transcripts) {
+        const results = {
+            synced: 0,
+            conflicts: [],
+            errors: []
+        };
+        for (const transcript of transcripts) {
+            try {
+                // Check if transcript exists
+                const existing = await Transcript_1.Transcript.findOne({
+                    userId,
+                    $or: [
+                        { id: transcript.id },
+                        { localId: transcript.localId }
+                    ]
+                });
+                if (existing) {
+                    // Check for conflicts
+                    if (existing.version && transcript.version && existing.version !== transcript.version) {
+                        results.conflicts.push({
+                            localId: transcript.localId,
+                            serverId: existing.id,
+                            conflict: 'version_mismatch',
+                            serverVersion: existing.version,
+                            clientVersion: transcript.version
+                        });
+                        continue;
+                    }
+                    // Update existing transcript
+                    const updateData = {
+                        ...transcript,
+                        userId,
+                        updatedAt: new Date(),
+                        version: (existing.version || 0) + 1,
+                        syncStatus: 'synced'
+                    };
+                    await Transcript_1.Transcript.findByIdAndUpdate(existing._id, updateData);
+                }
+                else {
+                    // Create new transcript
+                    const transcriptData = {
+                        ...transcript,
+                        userId,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        version: 1,
+                        syncStatus: 'synced'
+                    };
+                    await Transcript_1.Transcript.create(transcriptData);
+                }
+                results.synced++;
+            }
+            catch (error) {
+                console.error('Error syncing transcript:', error);
+                results.errors.push({
+                    localId: transcript.localId,
+                    error: error.message
+                });
+            }
+        }
+        return results;
+    }
+    async getSyncStatus(userId) {
+        try {
+            const [totalTranscripts, pendingSync, conflicts, lastModified] = await Promise.all([
+                Transcript_1.Transcript.countDocuments({ userId }),
+                Transcript_1.Transcript.countDocuments({ userId, syncStatus: 'pending' }),
+                Transcript_1.Transcript.countDocuments({ userId, syncStatus: 'conflict' }),
+                Transcript_1.Transcript.findOne({ userId }).sort({ updatedAt: -1 }).select('updatedAt')
+            ]);
+            return {
+                lastSync: new Date(),
+                totalTranscripts,
+                pendingSync,
+                conflicts,
+                lastModified: lastModified?.updatedAt || new Date()
+            };
+        }
+        catch (error) {
+            console.error('Error getting sync status:', error);
+            throw error;
+        }
+    }
+    async resolveConflicts(userId, conflicts) {
+        const results = {
+            resolved: 0,
+            errors: []
+        };
+        for (const conflict of conflicts) {
+            try {
+                const { localId, serverId, resolution, data } = conflict;
+                if (resolution === 'use_client') {
+                    // Use client data
+                    await Transcript_1.Transcript.findByIdAndUpdate(serverId, {
+                        ...data,
+                        userId,
+                        updatedAt: new Date(),
+                        version: (data.version || 0) + 1,
+                        syncStatus: 'synced'
+                    });
+                }
+                else if (resolution === 'use_server') {
+                    // Use server data, update client
+                    const serverTranscript = await Transcript_1.Transcript.findById(serverId);
+                    // This would typically be handled by the client
+                }
+                else if (resolution === 'merge') {
+                    // Merge data (custom logic needed)
+                    const serverTranscript = await Transcript_1.Transcript.findById(serverId);
+                    const mergedData = {
+                        ...serverTranscript,
+                        ...data,
+                        content: `${serverTranscript.content}\n\n--- Merged ---\n\n${data.content}`,
+                        updatedAt: new Date(),
+                        version: (serverTranscript.version || 0) + 1,
+                        syncStatus: 'synced'
+                    };
+                    await Transcript_1.Transcript.findByIdAndUpdate(serverId, mergedData);
+                }
+                results.resolved++;
+            }
+            catch (error) {
+                console.error('Error resolving conflict:', error);
+                results.errors.push({
+                    localId: conflict.localId,
+                    error: error.message
+                });
+            }
+        }
+        return results;
+    }
 }
 exports.MongoDBTranscriptsRepositoryImpl = MongoDBTranscriptsRepositoryImpl;
 exports.mongoTranscriptsRepo = new MongoDBTranscriptsRepositoryImpl();

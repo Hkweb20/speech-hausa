@@ -981,6 +981,901 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token for MongoDB authentication
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for service-to-service authentication
+
+  schemas:
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique user ID
+        email:
+          type: string
+          format: email
+          description: User's email address
+        name:
+          type: string
+          description: User's display name
+        subscriptionTier:
+          type: string
+          enum: [free, basic, gold, premium]
+          description: Current subscription tier
+        subscriptionStatus:
+          type: string
+          enum: [active, cancelled, expired, trial]
+          description: Subscription status
+        pointsBalance:
+          type: integer
+          description: Current points balance
+        isPremium:
+          type: boolean
+          description: Whether user has premium features
+        usageStats:
+          $ref: '#/components/schemas/UsageStats'
+
+    UsageStats:
+      type: object
+      properties:
+        dailyMinutes:
+          type: integer
+          description: Minutes used today
+        monthlyMinutes:
+          type: integer
+          description: Minutes used this month
+        totalMinutes:
+          type: integer
+          description: Total minutes used
+        transcriptsCount:
+          type: integer
+          description: Total transcripts created
+
+    UserPreferences:
+      type: object
+      properties:
+        language:
+          type: string
+          enum: [ha-NG, en-US, fr-FR, ar]
+          description: Preferred language
+        theme:
+          type: string
+          enum: [light, dark]
+          description: UI theme preference
+        autoPunctuation:
+          type: boolean
+          description: Enable automatic punctuation
+        cloudSync:
+          type: boolean
+          description: Enable cloud synchronization
+
+    UserRegistrationData:
+      type: object
+      properties:
+        name:
+          type: string
+          description: User's display name
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    SubscriptionTier:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Tier identifier
+        name:
+          type: string
+          description: Display name
+        price:
+          type: integer
+          description: Price in cents
+        currency:
+          type: string
+          description: Currency code
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+          description: Billing cycle
+        features:
+          $ref: '#/components/schemas/TierFeatures'
+        limits:
+          $ref: '#/components/schemas/TierLimits'
+        description:
+          type: string
+          description: Tier description
+
+    TierFeatures:
+      type: object
+      properties:
+        dailyMinutes:
+          type: integer
+          description: Daily transcription minutes limit (-1 for unlimited)
+        monthlyMinutes:
+          type: integer
+          description: Monthly transcription minutes limit (-1 for unlimited)
+        maxFileSize:
+          type: integer
+          description: Maximum file size in MB
+        maxTranscripts:
+          type: integer
+          description: Maximum transcripts stored (-1 for unlimited)
+        exportFormats:
+          type: array
+          items:
+            type: string
+          description: Available export formats
+        aiFeatures:
+          type: array
+          items:
+            type: string
+          description: Available AI features
+        cloudSync:
+          type: boolean
+          description: Cloud synchronization enabled
+        offlineMode:
+          type: boolean
+          description: Offline mode available
+        prioritySupport:
+          type: boolean
+          description: Priority support available
+        apiAccess:
+          type: boolean
+          description: API access available
+
+    TierLimits:
+      type: object
+      properties:
+        dailyAdWatches:
+          type: integer
+          description: Maximum ads per day
+        pointsPerAd:
+          type: integer
+          description: Points earned per ad
+        maxPointsBalance:
+          type: integer
+          description: Maximum points balance
+
+    PaymentMethod:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [card, paypal, apple, google]
+          description: Payment method type
+        last4:
+          type: string
+          description: Last 4 digits of card
+        brand:
+          type: string
+          description: Card brand
+
+    PointsLimits:
+      type: object
+      properties:
+        dailyAdWatches:
+          type: integer
+          description: Maximum ads per day
+        maxPointsBalance:
+          type: integer
+          description: Maximum points balance
+
+    PointsAction:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Action identifier
+        name:
+          type: string
+          description: Display name
+        cost:
+          type: integer
+          description: Points cost
+        description:
+          type: string
+          description: Action description
+        requirements:
+          $ref: '#/components/schemas/ActionRequirements'
+
+    ActionRequirements:
+      type: object
+      properties:
+        minTier:
+          type: string
+          description: Minimum subscription tier required
+        maxDuration:
+          type: integer
+          description: Maximum duration in seconds
+        maxLength:
+          type: integer
+          description: Maximum content length in characters
+
+    Transcript:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique transcript ID
+        userId:
+          type: string
+          description: User ID who created the transcript
+        title:
+          type: string
+          description: Transcript title
+        content:
+          type: string
+          description: Transcribed text content
+        timestamp:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        duration:
+          type: number
+          description: Audio duration in seconds
+        language:
+          type: string
+          enum: [ha-NG, en-US, fr-FR, ar]
+          description: Language of the transcript
+        source:
+          type: string
+          enum: [live, file_upload]
+          description: Source of the transcript
+        isPremium:
+          type: boolean
+          description: Whether created with premium features
+        tags:
+          type: array
+          items:
+            type: string
+          description: Transcript tags
+        isCloudSynced:
+          type: boolean
+          description: Whether synced to cloud
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    MobileTranscript:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique transcript ID
+        userId:
+          type: string
+          description: User ID who created the transcript
+        title:
+          type: string
+          description: Transcript title
+        content:
+          type: string
+          description: Transcript content
+        timestamp:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        duration:
+          type: number
+          description: Audio duration in seconds
+        language:
+          type: string
+          description: Language code
+        source:
+          type: string
+          enum: [file_upload, live, realtime]
+          description: Source of the transcript
+        isPremium:
+          type: boolean
+          description: Whether created with premium features
+        syncStatus:
+          type: string
+          enum: [synced, pending, conflict]
+          description: Synchronization status
+        version:
+          type: integer
+          description: Version number for conflict resolution
+        lastModified:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+
+    OfflineTranscript:
+      type: object
+      properties:
+        localId:
+          type: string
+          description: Local ID for offline-created transcripts
+        id:
+          type: string
+          description: Server ID (if synced)
+        userId:
+          type: string
+          description: User ID
+        title:
+          type: string
+          description: Transcript title
+        content:
+          type: string
+          description: Transcript content
+        timestamp:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        duration:
+          type: number
+          description: Audio duration in seconds
+        language:
+          type: string
+          description: Language code
+        source:
+          type: string
+          enum: [file_upload, live, realtime]
+          description: Source of the transcript
+        isPremium:
+          type: boolean
+          description: Whether created with premium features
+        version:
+          type: integer
+          description: Version number for conflict resolution
+        lastModified:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+
+    SyncConflict:
+      type: object
+      properties:
+        localId:
+          type: string
+          description: Local transcript ID
+        serverId:
+          type: string
+          description: Server transcript ID
+        conflict:
+          type: string
+          enum: [version_mismatch, content_conflict, metadata_conflict]
+          description: Type of conflict
+        serverVersion:
+          type: integer
+          description: Server version number
+        clientVersion:
+          type: integer
+          description: Client version number
+        serverData:
+          type: object
+          description: Server-side data
+        clientData:
+          type: object
+          description: Client-side data
+
+    DeviceToken:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: User ID
+        token:
+          type: string
+          description: FCM device token
+        platform:
+          type: string
+          enum: [ios, android]
+          description: Device platform
+        lastActive:
+          type: string
+          format: date-time
+          description: Last active timestamp
+
+    MobileConfig:
+      type: object
+      properties:
+        version:
+          type: string
+          description: App version
+        minVersion:
+          type: string
+          description: Minimum supported version
+        features:
+          type: object
+          properties:
+            offlineMode:
+              type: boolean
+              description: Offline mode support
+            realTimeSync:
+              type: boolean
+              description: Real-time sync support
+            pushNotifications:
+              type: boolean
+              description: Push notification support
+            backgroundSync:
+              type: boolean
+              description: Background sync support
+            maxOfflineTranscripts:
+              type: integer
+              description: Maximum offline transcripts
+            maxFileSize:
+              type: integer
+              description: Maximum file size in bytes
+            supportedFormats:
+              type: array
+              items:
+                type: string
+              description: Supported audio formats
+            supportedLanguages:
+              type: array
+              items:
+                type: string
+              description: Supported languages
+            syncInterval:
+              type: integer
+              description: Sync interval in milliseconds
+            retryAttempts:
+              type: integer
+              description: Maximum retry attempts
+        api:
+          type: object
+          properties:
+            baseUrl:
+              type: string
+              description: API base URL
+            timeout:
+              type: integer
+              description: Request timeout in milliseconds
+            retryDelay:
+              type: integer
+              description: Retry delay in milliseconds
+        user:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              description: User ID
+            subscriptionTier:
+              type: string
+              description: Subscription tier
+            limits:
+              type: object
+              properties:
+                dailyUploads:
+                  type: integer
+                  description: Daily upload limit
+                maxFileDuration:
+                  type: integer
+                  description: Maximum file duration in seconds
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    InsufficientPoints:
+      description: Insufficient points
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+                properties:
+                  actionId:
+                    type: string
+                  cost:
+                    type: integer
+                  remainingPoints:
+                    type: integer
+                  reason:
+                    type: string
+
+    UsageLimitExceeded:
+      description: Usage limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+                properties:
+                  reason:
+                    type: string
+                  remainingMinutes:
+                    type: integer
+                  tier:
+                    type: string
+                  resetTime:
+                    type: string
+                    format: date-time
+
+    FileTooLarge:
+      description: File too large
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+                properties:
+                  fileSize:
+                    type: number
+                  maxSize:
+                    type: number
+                  tier:
+                    type: string
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+  # Translation Endpoints
+  /api/translation/translate:
+    post:
+      summary: Translate Hausa text to target language
+      description: |
+        Translate Hausa text to English, French, or Arabic using Google Translate API.
+        Supports usage limits based on subscription tier.
+      operationId: translateText
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - targetLanguage
+              properties:
+                text:
+                  type: string
+                  description: Hausa text to translate
+                  example: "Ina son ruwa"
+                  minLength: 3
+                targetLanguage:
+                  type: string
+                  enum: [en, fr, ar]
+                  description: Target language code
+                  example: "en"
+      responses:
+        '200':
+          description: Translation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  originalText:
+                    type: string
+                    example: "Ina son ruwa"
+                  translatedText:
+                    type: string
+                    example: "I want water"
+                  targetLanguage:
+                    type: string
+                    example: "en"
+                  languageName:
+                    type: string
+                    example: "English"
+                  originalLength:
+                    type: integer
+                    example: 12
+                  translatedLength:
+                    type: integer
+                    example: 13
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/UsageLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/translation/tts:
+    post:
+      summary: Convert text to speech
+      description: |
+        Convert text to speech using Google Text-to-Speech API.
+        Supports multiple voices and languages.
+      operationId: textToSpeech
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - languageCode
+              properties:
+                text:
+                  type: string
+                  description: Text to convert to speech
+                  example: "I want water"
+                  minLength: 3
+                languageCode:
+                  type: string
+                  enum: [en-US, fr-FR, ar-XA]
+                  description: TTS language code
+                  example: "en-US"
+                voiceName:
+                  type: string
+                  description: Specific voice name (optional)
+                  example: "en-US-Wavenet-A"
+      responses:
+        '200':
+          description: Audio generated successfully
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/UsageLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/translation/translate-and-speak:
+    post:
+      summary: Complete translation pipeline
+      description: |
+        Complete translation pipeline: translate Hausa text to target language
+        and convert to speech in one request.
+      operationId: translateAndSpeak
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - targetLanguage
+              properties:
+                text:
+                  type: string
+                  description: Hausa text to translate and speak
+                  example: "Ina son ruwa"
+                  minLength: 3
+                targetLanguage:
+                  type: string
+                  enum: [en, fr, ar]
+                  description: Target language code
+                  example: "en"
+                voiceName:
+                  type: string
+                  description: Specific voice name (optional)
+                  example: "en-US-Wavenet-A"
+      responses:
+        '200':
+          description: Translation and TTS successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  originalText:
+                    type: string
+                    example: "Ina son ruwa"
+                  translatedText:
+                    type: string
+                    example: "I want water"
+                  targetLanguage:
+                    type: string
+                    example: "en"
+                  languageName:
+                    type: string
+                    example: "English"
+                  languageCode:
+                    type: string
+                    example: "en-US"
+                  voiceUsed:
+                    type: string
+                    example: "en-US-Wavenet-A"
+                  audioSize:
+                    type: integer
+                    example: 15234
+                  originalLength:
+                    type: integer
+                    example: 12
+                  translatedLength:
+                    type: integer
+                    example: 13
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/UsageLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/translation/voices/{languageCode}:
+    get:
+      summary: Get available voices for language
+      description: |
+        Get list of available voices for a specific language code.
+      operationId: getAvailableVoices
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: languageCode
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [en-US, fr-FR, ar-XA]
+          description: TTS language code
+          example: "en-US"
+      responses:
+        '200':
+          description: Voices retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  languageCode:
+                    type: string
+                    example: "en-US"
+                  voices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: "en-US-Wavenet-A"
+                        gender:
+                          type: string
+                          example: "MALE"
+                        languageCode:
+                          type: string
+                          example: "en-US"
+                  voiceCount:
+                    type: integer
+                    example: 8
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/translation/languages:
+    get:
+      summary: Get supported languages
+      description: |
+        Get list of all supported languages for translation and TTS.
+      operationId: getSupportedLanguages
+      tags:
+        - Translation
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Languages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  languages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          example: "en"
+                        name:
+                          type: string
+                          example: "English"
+                        ttsCode:
+                          type: string
+                          example: "en-US"
+                        flag:
+                          type: string
+                          example: "🇺🇸"
+                  totalLanguages:
+                    type: integer
+                    example: 3
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   # Mobile-Specific Endpoints
   /api/mobile/health:
     get:

@@ -277,6 +277,177 @@ export class MongoDBTranscriptsRepositoryImpl implements MongoDBTranscriptsRepos
       isLocal: !mongoTranscript.isCloudSynced
     };
   }
+
+  // Mobile sync methods
+  async getOfflineTranscripts(userId: string, since: Date, limit: number): Promise<Transcript[]> {
+    try {
+      const transcripts = await TranscriptModel.find({
+        userId,
+        updatedAt: { $gt: since }
+      })
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .lean();
+
+      return transcripts.map(this.mapToDomain);
+    } catch (error) {
+      console.error('Error getting offline transcripts:', error);
+      throw error;
+    }
+  }
+
+  async bulkSyncTranscripts(userId: string, transcripts: any[]): Promise<{
+    synced: number;
+    conflicts: any[];
+    errors: any[];
+  }> {
+    const results = {
+      synced: 0,
+      conflicts: [],
+      errors: []
+    };
+
+    for (const transcript of transcripts) {
+      try {
+        // Check if transcript exists
+        const existing = await TranscriptModel.findOne({
+          userId,
+          $or: [
+            { id: transcript.id },
+            { localId: transcript.localId }
+          ]
+        });
+
+        if (existing) {
+          // Check for conflicts
+          if (existing.version && transcript.version && existing.version !== transcript.version) {
+            results.conflicts.push({
+              localId: transcript.localId,
+              serverId: existing.id,
+              conflict: 'version_mismatch',
+              serverVersion: existing.version,
+              clientVersion: transcript.version
+            });
+            continue;
+          }
+
+          // Update existing transcript
+          const updateData = {
+            ...transcript,
+            userId,
+            updatedAt: new Date(),
+            version: (existing.version || 0) + 1,
+            syncStatus: 'synced'
+          };
+
+          await TranscriptModel.findByIdAndUpdate(existing._id, updateData);
+        } else {
+          // Create new transcript
+          const transcriptData = {
+            ...transcript,
+            userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            version: 1,
+            syncStatus: 'synced'
+          };
+
+          await TranscriptModel.create(transcriptData);
+        }
+
+        results.synced++;
+      } catch (error) {
+        console.error('Error syncing transcript:', error);
+        results.errors.push({
+          localId: transcript.localId,
+          error: error.message
+        });
+      }
+    }
+
+    return results;
+  }
+
+  async getSyncStatus(userId: string): Promise<{
+    lastSync: Date;
+    totalTranscripts: number;
+    pendingSync: number;
+    conflicts: number;
+    lastModified: Date;
+  }> {
+    try {
+      const [totalTranscripts, pendingSync, conflicts, lastModified] = await Promise.all([
+        TranscriptModel.countDocuments({ userId }),
+        TranscriptModel.countDocuments({ userId, syncStatus: 'pending' }),
+        TranscriptModel.countDocuments({ userId, syncStatus: 'conflict' }),
+        TranscriptModel.findOne({ userId }).sort({ updatedAt: -1 }).select('updatedAt')
+      ]);
+
+      return {
+        lastSync: new Date(),
+        totalTranscripts,
+        pendingSync,
+        conflicts,
+        lastModified: lastModified?.updatedAt || new Date()
+      };
+    } catch (error) {
+      console.error('Error getting sync status:', error);
+      throw error;
+    }
+  }
+
+  async resolveConflicts(userId: string, conflicts: any[]): Promise<{
+    resolved: number;
+    errors: any[];
+  }> {
+    const results = {
+      resolved: 0,
+      errors: []
+    };
+
+    for (const conflict of conflicts) {
+      try {
+        const { localId, serverId, resolution, data } = conflict;
+
+        if (resolution === 'use_client') {
+          // Use client data
+          await TranscriptModel.findByIdAndUpdate(serverId, {
+            ...data,
+            userId,
+            updatedAt: new Date(),
+            version: (data.version || 0) + 1,
+            syncStatus: 'synced'
+          });
+        } else if (resolution === 'use_server') {
+          // Use server data, update client
+          const serverTranscript = await TranscriptModel.findById(serverId);
+          // This would typically be handled by the client
+        } else if (resolution === 'merge') {
+          // Merge data (custom logic needed)
+          const serverTranscript = await TranscriptModel.findById(serverId);
+          const mergedData = {
+            ...serverTranscript,
+            ...data,
+            content: `${serverTranscript.content}\n\n--- Merged ---\n\n${data.content}`,
+            updatedAt: new Date(),
+            version: (serverTranscript.version || 0) + 1,
+            syncStatus: 'synced'
+          };
+          await TranscriptModel.findByIdAndUpdate(serverId, mergedData);
+        }
+
+        results.resolved++;
+      } catch (error) {
+        console.error('Error resolving conflict:', error);
+        results.errors.push({
+          localId: conflict.localId,
+          error: error.message
+        });
+      }
+    }
+
+    return results;
+  }
 }
 
 export const mongoTranscriptsRepo = new MongoDBTranscriptsRepositoryImpl();

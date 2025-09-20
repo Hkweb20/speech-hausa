@@ -9,6 +9,8 @@ import { translationRouter } from './translation.routes';
 import usageRoutes from './usage.routes';
 import adminRoutes from './admin.routes';
 import languagesRoutes from './languages.routes';
+import mobileSyncRoutes from './mobile-sync.routes';
+import pushNotificationRoutes from './push-notification.routes';
 import { logger } from '../config/logger';
 
 export const apiRouter = Router();
@@ -23,10 +25,14 @@ apiRouter.use('/api/translation', translationRouter);
 apiRouter.use('/api/usage', usageRoutes);
 apiRouter.use('/api/languages', languagesRoutes);
 apiRouter.use('/api/admin', adminRoutes);
+apiRouter.use('/api/mobile', mobileSyncRoutes);
+apiRouter.use('/api/push', pushNotificationRoutes);
 
 logger.info('AI routes registered at /api/ai');
 logger.info('Translation routes registered at /api/translation');
 logger.info('Usage routes registered at /api/usage');
 logger.info('Transcript history routes registered at /api/history');
 logger.info('Admin routes registered at /api/admin');
+logger.info('Mobile sync routes registered at /api/mobile');
+logger.info('Push notification routes registered at /api/push');
 
