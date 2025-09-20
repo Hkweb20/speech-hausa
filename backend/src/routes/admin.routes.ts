@@ -31,6 +31,7 @@ import {
   addLanguage,
   updateLanguage,
   deleteLanguage,
+  toggleLanguageStatus,
   getAvailableLanguages
 } from '../controllers/admin-languages.controller';
 import { 
@@ -155,6 +156,10 @@ router.put('/languages/:id',
 router.delete('/languages/:id', 
   requirePermission('manage_system'), 
   deleteLanguage
+);
+router.patch('/languages/:id/toggle', 
+  requirePermission('manage_system'), 
+  toggleLanguageStatus
 );
 router.get('/languages/available', 
   getAvailableLanguages

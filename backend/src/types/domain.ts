@@ -25,6 +25,18 @@ export interface Transcript {
     summary?: string;
     keywords?: string[];
     formattedFor?: SocialMediaFormat;
+    // Additional fields for MongoDB compatibility
+    language?: 'ha-NG' | 'en-US' | 'fr-FR' | 'ar' | 'yo-NG' | 'ig-NG';
+    source?: 'live' | 'file_upload';
+    fileSize?: number;
+    fileName?: string;
+    isPremium?: boolean;
+    translation?: {
+      targetLanguage: string;
+      translatedText: string;
+      timestamp: string;
+    };
+    pointsSpent?: number;
   }
   
 export interface Speaker {

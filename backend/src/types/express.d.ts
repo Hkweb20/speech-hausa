@@ -14,6 +14,12 @@ export interface AuthUser {
   };
 }
 
+import { Request } from 'express';
+
+export interface AuthenticatedRequest extends Request {
+  user?: AuthUser;
+}
+
 declare namespace Express {
   interface UserStub {
     id: string;

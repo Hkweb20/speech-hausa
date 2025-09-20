@@ -150,6 +150,29 @@
             background: #e67e22;
         }
 
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .badge-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
         .table {
             width: 100%;
             border-collapse: collapse;
@@ -1398,6 +1421,7 @@
                                     <th>Source</th>
                                     <th>Target</th>
                                     <th>Translation Code</th>
+                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -1405,6 +1429,10 @@
                     `;
                     
                     data.languages.forEach(lang => {
+                        const statusBadge = lang.enabled ? 
+                            '<span class="badge badge-success">Enabled</span>' : 
+                            '<span class="badge badge-danger">Disabled</span>';
+                        
                         tableHTML += `
                             <tr>
                                 <td>${lang.name}</td>
@@ -1413,7 +1441,12 @@
                                 <td>${lang.isSourceLanguage ? '✅' : '❌'}</td>
                                 <td>${lang.isTargetLanguage ? '✅' : '❌'}</td>
                                 <td><code>${lang.translationCode}</code></td>
+                                <td>${statusBadge}</td>
                                 <td>
+                                    <button onclick="toggleLanguageStatus('${lang.id}', ${lang.enabled})" 
+                                            class="btn ${lang.enabled ? 'btn-warning' : 'btn-success'}">
+                                        ${lang.enabled ? 'Disable' : 'Enable'}
+                                    </button>
                                     <button onclick="editLanguage('${lang.id}')" class="btn">Edit</button>
                                     <button onclick="deleteLanguage('${lang.id}')" class="btn btn-danger">Delete</button>
                                 </td>
@@ -1482,6 +1515,35 @@
                     loadLanguages();
                 } else {
                     showError(data.error || 'Failed to add language');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Toggle language status
+        async function toggleLanguageStatus(languageId, currentStatus) {
+            try {
+                const action = currentStatus ? 'disable' : 'enable';
+                if (!confirm(`Are you sure you want to ${action} this language?`)) {
+                    return;
+                }
+
+                const response = await fetch(`/api/admin/languages/${languageId}/toggle`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`Language ${action}d successfully`);
+                    loadLanguages();
+                } else {
+                    showError(data.error || `Failed to ${action} language`);
                 }
             } catch (error) {
                 showError('Network error: ' + error.message);

@@ -3,6 +3,7 @@ import { GcpStreamingTranscriptionService } from '../services/gcp-streaming.serv
 import { audioChunkSchema, endSessionSchema, joinSessionSchema, updateLanguagesSchema } from '../utils/validators';
 import { logger } from '../config/logger';
 import { transcriptsRepo } from '../repositories/transcripts.repository';
+import { mongoTranscriptsRepo } from '../repositories/mongodb-transcripts.repository';
 import { Transcript } from '../types/domain';
 import { UsageService } from '../services/usage.service';
 import { translateText } from '../services/translation.service';
@@ -91,7 +92,7 @@ export function initSockets(io: Server) {
       // Store language information for the session
       const defaultSourceLanguage = sourceLanguage || 'ha-NG';
       const defaultTargetLanguage = targetLanguage || 'en-US';
-      
+
       let sessionId = providedId;
       if (!sessionId) {
         // Store language information BEFORE creating the session
@@ -420,21 +421,27 @@ export function initSockets(io: Server) {
           (socket.data as any).usageCheckInterval = null;
         }
 
-        // Persist transcript
+        // Persist transcript to both repositories (transition period)
         const now = new Date().toISOString();
         const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
         const t: Transcript = {
           id,
           userId: userId || 'stub-user-id',
-          title: 'Live session',
+          title: 'Real-time Streaming Session',
           content: finalText,
           timestamp: now,
           tags: [],
           isLocal: !userId, // Local if no user authenticated
           cloudSync: !!userId, // Cloud sync if user authenticated
           duration: startTime ? (Date.now() - startTime) / 1000 : 0, // Duration in seconds
+          language: sessionLanguages.get(sessionId) || 'ha-NG',
+          source: 'live' as const,
+          isPremium: !!userId, // Premium if user authenticated
         } as Transcript;
+        
+        // Save to both repositories for now (transition period)
         transcriptsRepo.create(t);
+        await mongoTranscriptsRepo.create(t);
       } catch (e: any) {
         logger.error(e, 'endSession failed');
         socket.emit('error', { code: e.code ?? 'END_ERROR', message: e.message ?? 'Error' });
@@ -464,6 +471,31 @@ export function initSockets(io: Server) {
           }
         } else {
           logger.warn({ sessionId: sid, userId, startTime }, 'No user tracking data found for session on disconnect - usage not recorded');
+        }
+
+        // Persist transcript to both repositories (transition period)
+        if (finalText && finalText.trim()) {
+          const now = new Date().toISOString();
+          const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          const t: Transcript = {
+            id,
+            userId: userId || 'stub-user-id',
+            title: 'Real-time Streaming Session (Disconnected)',
+            content: finalText,
+            timestamp: now,
+            tags: [],
+            isLocal: !userId, // Local if no user authenticated
+            cloudSync: !!userId, // Cloud sync if user authenticated
+            duration: startTime ? (Date.now() - startTime) / 1000 : 0, // Duration in seconds
+            language: sessionLanguages.get(sid) || 'ha-NG',
+            source: 'live' as const,
+            isPremium: !!userId, // Premium if user authenticated
+          } as Transcript;
+          
+          // Save to both repositories for now (transition period)
+          transcriptsRepo.create(t);
+          await mongoTranscriptsRepo.create(t);
+          logger.info({ sessionId: sid, userId, transcriptId: id }, 'Real-time streaming transcript saved on disconnect');
         }
 
         // Clean up session tracking

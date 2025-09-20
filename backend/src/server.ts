@@ -6,11 +6,15 @@ import { logger } from './config/logger';
 import { databaseService } from './config/database';
 import { initSockets } from './sockets';
 import { dailyResetService } from './services/daily-reset.service';
+import { seedLanguages } from './scripts/seed-languages';
 
 async function startServer() {
   try {
     // Connect to database
     await databaseService.connect();
+    
+    // Seed default languages
+    await seedLanguages();
     
     const app = createApp();
     const server = http.createServer(app);

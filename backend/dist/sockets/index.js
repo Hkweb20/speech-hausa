@@ -5,6 +5,7 @@ const gcp_streaming_service_1 = require("../services/gcp-streaming.service");
 const validators_1 = require("../utils/validators");
 const logger_1 = require("../config/logger");
 const transcripts_repository_1 = require("../repositories/transcripts.repository");
+const mongodb_transcripts_repository_1 = require("../repositories/mongodb-transcripts.repository");
 const usage_service_1 = require("../services/usage.service");
 const translation_service_1 = require("../services/translation.service");
 const NAMESPACE = '/transcription';
@@ -381,21 +382,26 @@ function initSockets(io) {
                     clearInterval(usageCheckInterval);
                     socket.data.usageCheckInterval = null;
                 }
-                // Persist transcript
+                // Persist transcript to both repositories (transition period)
                 const now = new Date().toISOString();
                 const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
                 const t = {
                     id,
                     userId: userId || 'stub-user-id',
-                    title: 'Live session',
+                    title: 'Real-time Streaming Session',
                     content: finalText,
                     timestamp: now,
                     tags: [],
                     isLocal: !userId, // Local if no user authenticated
                     cloudSync: !!userId, // Cloud sync if user authenticated
                     duration: startTime ? (Date.now() - startTime) / 1000 : 0, // Duration in seconds
+                    language: sessionLanguages.get(sessionId) || 'ha-NG',
+                    source: 'live',
+                    isPremium: !!userId, // Premium if user authenticated
                 };
+                // Save to both repositories for now (transition period)
                 transcripts_repository_1.transcriptsRepo.create(t);
+                await mongodb_transcripts_repository_1.mongoTranscriptsRepo.create(t);
             }
             catch (e) {
                 logger_1.logger.error(e, 'endSession failed');
@@ -426,6 +432,29 @@ function initSockets(io) {
                 }
                 else {
                     logger_1.logger.warn({ sessionId: sid, userId, startTime }, 'No user tracking data found for session on disconnect - usage not recorded');
+                }
+                // Persist transcript to both repositories (transition period)
+                if (finalText && finalText.trim()) {
+                    const now = new Date().toISOString();
+                    const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+                    const t = {
+                        id,
+                        userId: userId || 'stub-user-id',
+                        title: 'Real-time Streaming Session (Disconnected)',
+                        content: finalText,
+                        timestamp: now,
+                        tags: [],
+                        isLocal: !userId, // Local if no user authenticated
+                        cloudSync: !!userId, // Cloud sync if user authenticated
+                        duration: startTime ? (Date.now() - startTime) / 1000 : 0, // Duration in seconds
+                        language: sessionLanguages.get(sid) || 'ha-NG',
+                        source: 'live',
+                        isPremium: !!userId, // Premium if user authenticated
+                    };
+                    // Save to both repositories for now (transition period)
+                    transcripts_repository_1.transcriptsRepo.create(t);
+                    await mongodb_transcripts_repository_1.mongoTranscriptsRepo.create(t);
+                    logger_1.logger.info({ sessionId: sid, userId, transcriptId: id }, 'Real-time streaming transcript saved on disconnect');
                 }
                 // Clean up session tracking
                 sessionStartTimes.delete(sid);

@@ -39,6 +39,7 @@ exports.getTranscript = getTranscript;
 exports.deleteTranscript = deleteTranscript;
 const gcp_stt_service_1 = require("../services/gcp-stt.service");
 const transcripts_repository_1 = require("../repositories/transcripts.repository");
+const mongodb_transcripts_repository_1 = require("../repositories/mongodb-transcripts.repository");
 const audio_1 = require("../utils/audio");
 const usage_service_1 = require("../services/usage.service");
 const gcp = new gcp_stt_service_1.GcpSttService();
@@ -94,9 +95,22 @@ async function transcribeUpload(req, res) {
         const isLong = normalized.byteLength > 60 * 16000 * 2; // > ~60s at 16k, 16-bit mono
         let transcript = '';
         console.log('Starting transcription, isLong:', isLong);
+        console.log('Audio buffer size:', normalized.byteLength, 'bytes');
+        console.log('Language code:', languageCode || 'ha-NG');
         if (isLong) {
-            // Use long-running with GCS temp upload
-            const bucket = process.env.GCS_BUCKET || 'hausa-stt-temp';
+            // Check if GCS bucket is configured
+            const bucket = process.env.GCS_BUCKET;
+            if (!bucket) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'GCS_BUCKET environment variable not configured. Please set up Google Cloud Storage bucket for long audio files.',
+                    code: 'GCS_BUCKET_NOT_CONFIGURED',
+                    details: {
+                        message: 'For audio files longer than 1 minute, a Google Cloud Storage bucket is required.',
+                        solution: 'Set GCS_BUCKET environment variable to your Google Cloud Storage bucket name'
+                    }
+                });
+            }
             const object = `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}.wav`;
             console.log('Using long-running transcription with bucket:', bucket);
             const lr = await gcp.transcribeLongFile(normalized, bucket, object, { languageCode: languageCode || 'ha-NG' });
@@ -113,10 +127,22 @@ async function transcribeUpload(req, res) {
             transcript = result.transcript;
             console.log('Short transcription result:', transcript);
         }
+        console.log('Final transcript before validation:', transcript);
+        console.log('Transcript length:', transcript?.length || 0);
+        console.log('Transcript type:', typeof transcript);
         const actualDuration = normalized.byteLength / (16000 * 2); // 16kHz, 16-bit mono
         const userId = req.user?.id ?? 'anonymous';
         const now = new Date().toISOString();
         const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        // Check if transcript is empty or invalid
+        if (!transcript || transcript.trim() === '') {
+            console.log('Empty transcript received, not saving to database');
+            return res.status(400).json({
+                success: false,
+                message: 'No speech detected in the audio. Please try recording again.',
+                error: 'EMPTY_TRANSCRIPT'
+            });
+        }
         // Perform translation if target language is different from source language
         let translation = '';
         if (targetLanguage && targetLanguage !== languageCode && transcript.trim()) {
@@ -147,7 +173,9 @@ async function transcribeUpload(req, res) {
             cloudSync: !!req.user, // Cloud sync if user authenticated
             duration: actualDuration,
         };
+        // Save to both repositories for now (transition period)
         transcripts_repository_1.transcriptsRepo.create(t);
+        await mongodb_transcripts_repository_1.mongoTranscriptsRepo.create(t);
         // Record usage for authenticated users based on source
         if (req.user) {
             const usageService = new usage_service_1.UsageService();

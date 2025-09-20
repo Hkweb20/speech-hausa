@@ -37,9 +37,12 @@ exports.getSubscriptionTiers = getSubscriptionTiers;
 exports.updateSubscriptionTier = updateSubscriptionTier;
 exports.updateAllSubscriptionTiers = updateAllSubscriptionTiers;
 exports.resetAllDailyLimits = resetAllDailyLimits;
+exports.getDailyResetStatus = getDailyResetStatus;
+exports.triggerDailyReset = triggerDailyReset;
 const subscription_tiers_service_1 = require("../services/subscription-tiers.service");
 const AdminLog_1 = require("../models/AdminLog");
 const logger_1 = require("../config/logger");
+const daily_reset_service_1 = require("../services/daily-reset.service");
 async function getSubscriptionTiers(req, res) {
     try {
         const tiers = subscription_tiers_service_1.subscriptionTiersService.getTiers();
@@ -213,6 +216,59 @@ async function resetAllDailyLimits(req, res) {
         res.status(500).json({
             success: false,
             error: 'Failed to reset daily limits'
+        });
+    }
+}
+async function getDailyResetStatus(req, res) {
+    try {
+        const status = daily_reset_service_1.dailyResetService.getStatus();
+        res.json({
+            success: true,
+            status
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error }, 'Error getting daily reset status');
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get daily reset status'
+        });
+    }
+}
+async function triggerDailyReset(req, res) {
+    try {
+        await daily_reset_service_1.dailyResetService.triggerManualReset();
+        // Log the admin action (with error handling)
+        try {
+            await AdminLog_1.AdminLog.create({
+                adminId: req.admin._id.toString(),
+                adminEmail: req.admin.email,
+                action: 'manual_daily_reset',
+                resource: 'user_limits',
+                details: {
+                    resetType: 'daily_limits_manual',
+                    triggeredBy: 'admin'
+                },
+                ipAddress: req.ip || 'unknown',
+                userAgent: req.get('User-Agent') || 'unknown'
+            });
+        }
+        catch (logError) {
+            logger_1.logger.warn({ logError }, 'Failed to log manual reset action');
+        }
+        logger_1.logger.info({
+            adminId: req.admin._id
+        }, 'Manual daily reset triggered by admin');
+        res.json({
+            success: true,
+            message: 'Daily reset triggered successfully'
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error }, 'Error triggering daily reset');
+        res.status(500).json({
+            success: false,
+            error: 'Failed to trigger daily reset'
         });
     }
 }

@@ -20,6 +20,9 @@ router.get('/limits/subscription-tiers', (0, admin_auth_1.requirePermission)('ma
 router.put('/limits/subscription-tiers/:tierName', (0, admin_auth_1.requirePermission)('manage_limits'), admin_limits_controller_1.updateSubscriptionTier);
 router.put('/limits/subscription-tiers', (0, admin_auth_1.requirePermission)('manage_limits'), admin_limits_controller_1.updateAllSubscriptionTiers);
 router.post('/limits/reset-all-daily', (0, admin_auth_1.requireRole)(['super_admin', 'admin']), admin_limits_controller_1.resetAllDailyLimits);
+// Daily reset service management
+router.get('/limits/daily-reset/status', (0, admin_auth_1.requireRole)(['super_admin', 'admin']), admin_limits_controller_1.getDailyResetStatus);
+router.post('/limits/daily-reset/trigger', (0, admin_auth_1.requireRole)(['super_admin', 'admin']), admin_limits_controller_1.triggerDailyReset);
 // User management
 router.get('/users', (0, admin_auth_1.requirePermission)('manage_users'), admin_users_controller_1.getAllUsers);
 router.get('/users/:id', (0, admin_auth_1.requirePermission)('manage_users'), admin_users_controller_1.getUserById);
@@ -41,5 +44,6 @@ router.get('/languages', (0, admin_auth_1.requirePermission)('manage_system'), a
 router.post('/languages', (0, admin_auth_1.requirePermission)('manage_system'), admin_languages_controller_1.addLanguage);
 router.put('/languages/:id', (0, admin_auth_1.requirePermission)('manage_system'), admin_languages_controller_1.updateLanguage);
 router.delete('/languages/:id', (0, admin_auth_1.requirePermission)('manage_system'), admin_languages_controller_1.deleteLanguage);
+router.patch('/languages/:id/toggle', (0, admin_auth_1.requirePermission)('manage_system'), admin_languages_controller_1.toggleLanguageStatus);
 router.get('/languages/available', admin_languages_controller_1.getAvailableLanguages);
 exports.default = router;

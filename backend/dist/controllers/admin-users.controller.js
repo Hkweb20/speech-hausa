@@ -295,7 +295,7 @@ async function resetUserMonthlyLimits(req, res) {
 async function upgradeUser(req, res) {
     try {
         const { id } = req.params;
-        const { subscriptionTier, subscriptionStatus, subscriptionExpiresAt, customLimits } = req.body;
+        const { subscriptionTier, subscriptionStatus, subscriptionExpiresAt, customLimits, customLimitsOption } = req.body;
         const user = await User_1.User.findById(id);
         if (!user) {
             return res.status(404).json({
@@ -315,9 +315,9 @@ async function upgradeUser(req, res) {
         if (subscriptionExpiresAt) {
             updateData.subscriptionExpiresAt = new Date(subscriptionExpiresAt);
         }
-        // Apply custom limits if provided
-        if (customLimits) {
-            // Custom limits override the tier defaults
+        // Handle custom limits based on the option selected
+        if (customLimitsOption === 'set' && customLimits) {
+            // Set new custom limits
             updateData.customLimits = {
                 dailyMinutes: customLimits.dailyMinutes,
                 monthlyMinutes: customLimits.monthlyMinutes,
@@ -335,6 +335,15 @@ async function upgradeUser(req, res) {
                 prioritySupport: customLimits.prioritySupport,
                 apiAccess: customLimits.apiAccess
             };
+        }
+        else if (customLimitsOption === 'keep') {
+            // Keep existing custom limits (don't modify customLimits field)
+            // The existing customLimits will remain unchanged
+        }
+        else {
+            // Clear custom limits (default behavior for 'clear' option or no option specified)
+            // This ensures the user gets the new tier's default limits
+            updateData.customLimits = null;
         }
         const updatedUser = await User_1.User.findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true }).select('-password');
         // Log the admin action
