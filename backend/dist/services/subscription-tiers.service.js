@@ -13,7 +13,23 @@ class SubscriptionTiersService {
         // Force update premium tier to 90 on startup
         this.updateTier('premium', {
             features: {
-                dailyFileUploads: 90
+                dailyMinutes: 300,
+                monthlyMinutes: 9000,
+                maxFileSize: 300,
+                maxTranscripts: 1000,
+                exportFormats: ['json', 'txt', 'csv', 'srt', 'vtt'],
+                aiFeatures: ['summarization', 'translation', 'speaker_detection'],
+                cloudSync: true,
+                offlineMode: true,
+                prioritySupport: true,
+                apiAccess: true,
+                dailyAIRequests: 100,
+                monthlyAIRequests: 3000,
+                dailyFileUploads: 90,
+                maxFileDuration: 300,
+                dailyLiveRecordingMinutes: 60,
+                dailyRealTimeStreamingMinutes: 120,
+                dailyTranslationMinutes: 180
             }
         });
     }

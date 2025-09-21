@@ -32,11 +32,15 @@ export class AuthService {
       
       if (!user) {
         // Create new user
-        user = await this.createUser(uid, decodedToken);
+        user = await this.createUser(uid, decodedToken) as any;
       } else {
         // Update last login
         user.lastLogin = new Date();
         await user.save();
+      }
+
+      if (!user) {
+        throw new Error('User not found after creation');
       }
 
       return {
@@ -46,7 +50,7 @@ export class AuthService {
         subscriptionTier: user.subscriptionTier,
         subscriptionStatus: user.subscriptionStatus,
         pointsBalance: user.pointsBalance,
-        isPremium: user.subscriptionTier !== 'free',
+        isPremium: (user.subscriptionTier as string) !== 'free',
         usageStats: user.usageStats
       };
 
@@ -113,7 +117,7 @@ export class AuthService {
         subscriptionTier: user.subscriptionTier,
         subscriptionStatus: user.subscriptionStatus,
         pointsBalance: user.pointsBalance,
-        isPremium: user.subscriptionTier !== 'free',
+        isPremium: (user.subscriptionTier as string) !== 'free',
         usageStats: user.usageStats
       };
 
@@ -164,7 +168,7 @@ export class AuthService {
         subscriptionTier: user.subscriptionTier,
         subscriptionStatus: user.subscriptionStatus,
         pointsBalance: user.pointsBalance,
-        isPremium: user.subscriptionTier !== 'free',
+        isPremium: (user.subscriptionTier as string) !== 'free',
         usageStats: user.usageStats
       };
 
@@ -230,7 +234,7 @@ export class AuthService {
           subscriptionTier: user.subscriptionTier,
           subscriptionStatus: user.subscriptionStatus,
           pointsBalance: user.pointsBalance,
-          isPremium: user.subscriptionTier !== 'free',
+          isPremium: (user.subscriptionTier as string) !== 'free',
           usageStats: user.usageStats
         }
       };

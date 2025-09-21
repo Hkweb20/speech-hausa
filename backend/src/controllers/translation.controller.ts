@@ -237,7 +237,7 @@ export const translateAndSpeak = async (req: Request, res: Response) => {
       translatedLength: result.translatedText.length
     });
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error({ 
       error: error.message, 
       stack: error.stack,
@@ -393,7 +393,7 @@ export const processVoiceTranslation = async (req: Request, res: Response) => {
       success: true,
       originalText: 'Transcribed text from audio',
       translatedText: result.translatedText,
-      audioUrl: result.audioUrl,
+      audioData: result.audioBuffer.toString('base64'),
       duration: durationMinutes
     });
 

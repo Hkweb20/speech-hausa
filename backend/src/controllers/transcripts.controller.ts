@@ -9,7 +9,7 @@ import { UsageService } from '../services/usage.service';
 
 const gcp = new GcpSttService();
 
-export async function transcribeUpload(req: AuthenticatedRequest, res: Response) {
+export async function transcribeUpload(req: any, res: Response) {
   const file = (req as any).file as Express.Multer.File | undefined;
   if (!file) return res.status(400).json({ message: 'No file uploaded' });
   

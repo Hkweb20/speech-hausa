@@ -18,7 +18,7 @@ router.get('/health', mobileHealthCheck);
 router.get('/config', getAppConfig);
 
 // All other routes require authentication
-router.use(authenticate);
+router.use(authenticate as any);
 
 // Offline sync endpoints
 router.get('/offline/transcripts', getOfflineTranscripts);

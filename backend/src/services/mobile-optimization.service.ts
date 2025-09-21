@@ -72,7 +72,7 @@ export class MobileOptimizationService {
   static createMobileErrorResponse(error: any, mobile: boolean = true) {
     if (!mobile) return error;
 
-    const mobileError = {
+    const mobileError: any = {
       success: false,
       error: error.message || 'An error occurred',
       code: error.code || 'UNKNOWN_ERROR',

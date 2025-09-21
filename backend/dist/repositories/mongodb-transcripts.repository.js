@@ -361,15 +361,17 @@ class MongoDBTranscriptsRepositoryImpl {
                 else if (resolution === 'merge') {
                     // Merge data (custom logic needed)
                     const serverTranscript = await Transcript_1.Transcript.findById(serverId);
-                    const mergedData = {
-                        ...serverTranscript,
-                        ...data,
-                        content: `${serverTranscript.content}\n\n--- Merged ---\n\n${data.content}`,
-                        updatedAt: new Date(),
-                        version: (serverTranscript.version || 0) + 1,
-                        syncStatus: 'synced'
-                    };
-                    await Transcript_1.Transcript.findByIdAndUpdate(serverId, mergedData);
+                    if (serverTranscript) {
+                        const mergedData = {
+                            ...serverTranscript.toObject(),
+                            ...data,
+                            content: `${serverTranscript.content}\n\n--- Merged ---\n\n${data.content}`,
+                            updatedAt: new Date(),
+                            version: (serverTranscript.version || 0) + 1,
+                            syncStatus: 'synced'
+                        };
+                        await Transcript_1.Transcript.findByIdAndUpdate(serverId, mergedData);
+                    }
                 }
                 results.resolved++;
             }

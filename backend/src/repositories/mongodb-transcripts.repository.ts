@@ -303,8 +303,8 @@ export class MongoDBTranscriptsRepositoryImpl implements MongoDBTranscriptsRepos
   }> {
     const results = {
       synced: 0,
-      conflicts: [],
-      errors: []
+      conflicts: [] as any[],
+      errors: [] as any[]
     };
 
     for (const transcript of transcripts) {
@@ -356,7 +356,7 @@ export class MongoDBTranscriptsRepositoryImpl implements MongoDBTranscriptsRepos
         }
 
         results.synced++;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error syncing transcript:', error);
         results.errors.push({
           localId: transcript.localId,
@@ -402,7 +402,7 @@ export class MongoDBTranscriptsRepositoryImpl implements MongoDBTranscriptsRepos
   }> {
     const results = {
       resolved: 0,
-      errors: []
+      errors: [] as any[]
     };
 
     for (const conflict of conflicts) {
@@ -425,19 +425,21 @@ export class MongoDBTranscriptsRepositoryImpl implements MongoDBTranscriptsRepos
         } else if (resolution === 'merge') {
           // Merge data (custom logic needed)
           const serverTranscript = await TranscriptModel.findById(serverId);
-          const mergedData = {
-            ...serverTranscript,
-            ...data,
-            content: `${serverTranscript.content}\n\n--- Merged ---\n\n${data.content}`,
-            updatedAt: new Date(),
-            version: (serverTranscript.version || 0) + 1,
-            syncStatus: 'synced'
-          };
-          await TranscriptModel.findByIdAndUpdate(serverId, mergedData);
+          if (serverTranscript) {
+            const mergedData = {
+              ...serverTranscript.toObject(),
+              ...data,
+              content: `${serverTranscript.content}\n\n--- Merged ---\n\n${data.content}`,
+              updatedAt: new Date(),
+              version: (serverTranscript.version || 0) + 1,
+              syncStatus: 'synced'
+            };
+            await TranscriptModel.findByIdAndUpdate(serverId, mergedData);
+          }
         }
 
         results.resolved++;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error resolving conflict:', error);
         results.errors.push({
           localId: conflict.localId,

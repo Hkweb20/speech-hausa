@@ -8,13 +8,13 @@ const upload = multer();
 
 // File upload for transcription with source-specific limits handled in controller
 transcriptsRouter.post('/stt/transcribe', 
-  optionalAuth,
+  optionalAuth as any,
   upload.single('audio'),
   transcribeUpload
 );
 
 // MVP transcripts CRUD (list/get/delete)
-transcriptsRouter.get('/transcripts', optionalAuth, listTranscripts);
-transcriptsRouter.get('/transcripts/:id', optionalAuth, getTranscript);
-transcriptsRouter.delete('/transcripts/:id', optionalAuth, deleteTranscript);
+transcriptsRouter.get('/transcripts', optionalAuth as any, listTranscripts);
+transcriptsRouter.get('/transcripts/:id', optionalAuth as any, getTranscript);
+transcriptsRouter.delete('/transcripts/:id', optionalAuth as any, deleteTranscript);
 

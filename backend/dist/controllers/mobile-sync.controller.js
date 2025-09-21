@@ -158,8 +158,10 @@ exports.getAppConfig = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
                 id: userId,
                 subscriptionTier: req.user?.subscriptionTier || 'free',
                 limits: {
-                    dailyUploads: req.user?.usageStats?.dailyUploads || 0,
-                    maxFileDuration: req.user?.usageStats?.maxFileDuration || 300
+                    dailyMinutes: req.user?.usageStats?.dailyMinutes || 0,
+                    monthlyMinutes: req.user?.usageStats?.monthlyMinutes || 0,
+                    totalMinutes: req.user?.usageStats?.totalMinutes || 0,
+                    transcriptsCount: req.user?.usageStats?.transcriptsCount || 0
                 }
             } : null
         };

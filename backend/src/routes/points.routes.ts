@@ -12,7 +12,7 @@ const usageService = new UsageService();
  * GET /api/points/balance
  * Get user points balance
  */
-router.get('/balance', authenticate, async (req: any, res) => {
+router.get('/balance', authenticate as any, async (req: any, res) => {
   try {
     const stats = await usageService.getUserStats(req.user!.id);
     
@@ -65,7 +65,7 @@ router.get('/actions', (req, res) => {
  * POST /api/points/watch-ad
  * Record ad watch and award points
  */
-router.post('/watch-ad', authenticate, async (req: any, res) => {
+router.post('/watch-ad', authenticate as any, async (req: any, res) => {
   try {
     const { adId } = req.body;
     
@@ -113,7 +113,7 @@ router.post('/watch-ad', authenticate, async (req: any, res) => {
  * Generate summary using points
  */
 router.post('/summarize', 
-  authenticate, 
+  authenticate as any, 
   requirePoints('short_summary', 10),
   async (req: any, res) => {
     try {
@@ -160,7 +160,7 @@ router.post('/summarize',
  * Fix punctuation using points
  */
 router.post('/punctuation', 
-  authenticate, 
+  authenticate as any, 
   requirePoints('punctuation_fix', 5),
   async (req: any, res) => {
     try {
@@ -208,7 +208,7 @@ router.post('/punctuation',
  * Translate content using points
  */
 router.post('/translate', 
-  authenticate, 
+  authenticate as any, 
   requirePoints('short_translation', 15),
   async (req: any, res) => {
     try {

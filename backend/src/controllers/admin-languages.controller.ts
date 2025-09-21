@@ -12,7 +12,7 @@ export async function getLanguages(req: Request, res: Response) {
             res.json({
               success: true,
               languages: languages.map(lang => ({
-                id: lang._id.toString(),
+                id: (lang._id as any).toString(),
                 name: lang.name,
                 code: lang.code,
                 flag: lang.flag,
@@ -73,7 +73,7 @@ export async function addLanguage(req: Request, res: Response) {
       success: true,
       message: 'Language added successfully',
       language: {
-        id: newLanguage._id.toString(),
+        id: (newLanguage._id as any).toString(),
         name: newLanguage.name,
         code: newLanguage.code,
         flag: newLanguage.flag,
@@ -140,7 +140,7 @@ export async function updateLanguage(req: Request, res: Response) {
       success: true,
       message: 'Language updated successfully',
       language: {
-        id: updatedLanguage!._id.toString(),
+        id: (updatedLanguage!._id as any).toString(),
         name: updatedLanguage!.name,
         code: updatedLanguage!.code,
         flag: updatedLanguage!.flag,
@@ -225,7 +225,7 @@ export async function toggleLanguageStatus(req: Request, res: Response) {
       success: true,
       message: `Language ${updatedLanguage!.enabled ? 'enabled' : 'disabled'} successfully`,
       language: {
-        id: updatedLanguage!._id.toString(),
+        id: (updatedLanguage!._id as any).toString(),
         name: updatedLanguage!.name,
         code: updatedLanguage!.code,
         flag: updatedLanguage!.flag,

@@ -9,7 +9,7 @@ logger.info('AI routes module loaded');
 
 // AI text processing routes
 aiRouter.get('/test', testAI);
-aiRouter.post('/summarize', optionalAuth, summarizeText);
-aiRouter.post('/format', optionalAuth, formatForPlatform);
-aiRouter.post('/format-all', optionalAuth, formatForAllPlatforms);
-aiRouter.get('/usage', optionalAuth, getAIUsage);
+aiRouter.post('/summarize', optionalAuth as any, summarizeText);
+aiRouter.post('/format', optionalAuth as any, formatForPlatform);
+aiRouter.post('/format-all', optionalAuth as any, formatForAllPlatforms);
+aiRouter.get('/usage', optionalAuth as any, getAIUsage);

@@ -96,14 +96,16 @@ async function transcribeUpload(req, res) {
             size: file.size
         });
         // Extract format from mimetype or filename
-        let originalFormat = 'webm'; // default
+        let originalFormat; // Let FFmpeg auto-detect if unknown
         if (file.mimetype) {
-            if (file.mimetype.includes('mp3'))
+            if (file.mimetype.includes('mp3') || file.mimetype.includes('mpeg'))
                 originalFormat = 'mp3';
             else if (file.mimetype.includes('wav'))
                 originalFormat = 'wav';
             else if (file.mimetype.includes('m4a'))
                 originalFormat = 'm4a';
+            else if (file.mimetype.includes('aac'))
+                originalFormat = 'aac';
             else if (file.mimetype.includes('webm'))
                 originalFormat = 'webm';
             else if (file.mimetype.includes('ogg'))
@@ -119,6 +121,8 @@ async function transcribeUpload(req, res) {
                 originalFormat = 'wav';
             else if (ext === 'm4a')
                 originalFormat = 'm4a';
+            else if (ext === 'aac')
+                originalFormat = 'aac';
             else if (ext === 'webm')
                 originalFormat = 'webm';
             else if (ext === 'ogg')
@@ -126,6 +130,7 @@ async function transcribeUpload(req, res) {
             else if (ext === 'flac')
                 originalFormat = 'flac';
         }
+        console.log('Detected audio format:', originalFormat || 'auto-detect');
         const normalized = await (0, audio_1.normalizeToLinear16Mono16k)(file.buffer, originalFormat);
         console.log('Audio normalized, size:', normalized.byteLength, 'bytes');
         const isLong = normalized.byteLength > 60 * 16000 * 2; // > ~60s at 16k, 16-bit mono

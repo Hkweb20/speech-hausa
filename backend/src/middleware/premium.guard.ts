@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
  * Middleware to check if user can perform transcription
  */
 export const checkTranscriptionUsage = (source: 'live' | 'file_upload') => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: any, res: Response, next: NextFunction) => {
     try {
       // Allow anonymous users with basic limits
       if (!req.user) {
@@ -70,7 +70,7 @@ export const checkTranscriptionUsage = (source: 'live' | 'file_upload') => {
  * Middleware to check if user has premium feature access
  */
 export const requirePremiumFeature = (feature: string) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return (req: any, res: Response, next: NextFunction) => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -108,7 +108,7 @@ export const requirePremiumFeature = (feature: string) => {
  * Middleware to check if user has enough points for AI action
  */
 export const requirePoints = (actionId: string, cost: number) => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: any, res: Response, next: NextFunction) => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -155,7 +155,7 @@ export const requirePoints = (actionId: string, cost: number) => {
  * Middleware to check file size limits
  */
 export const checkFileSizeLimit = () => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return (req: any, res: Response, next: NextFunction) => {
     try {
       // Allow anonymous users with basic file size limits
       if (!req.user) {
@@ -229,7 +229,7 @@ function getRequiredTierForFeature(feature: string): string {
  * Middleware to record usage after successful operation
  */
 export const recordUsage = () => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: any, res: Response, next: NextFunction) => {
     try {
       // Record usage if this was a transcription request
       if (req.body._usageInfo) {

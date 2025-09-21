@@ -286,11 +286,13 @@ export const getTranscriptStats = asyncHandler(async (req: AuthenticatedRequest,
       totalDuration: recentTranscripts.reduce((sum, t) => sum + t.duration, 0),
       averageDuration: recentTranscripts.length > 0 ? recentTranscripts.reduce((sum, t) => sum + t.duration, 0) / recentTranscripts.length : 0,
       languageDistribution: recentTranscripts.reduce((acc, t) => {
-        acc[t.language] = (acc[t.language] || 0) + 1;
+        const lang = t.language || 'unknown';
+        acc[lang] = (acc[lang] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
       sourceDistribution: recentTranscripts.reduce((acc, t) => {
-        acc[t.source] = (acc[t.source] || 0) + 1;
+        const src = t.source || 'unknown';
+        acc[src] = (acc[src] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
       recentActivity: recentTranscripts.slice(0, 10).map(t => ({

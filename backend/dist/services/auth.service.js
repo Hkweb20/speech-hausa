@@ -39,6 +39,9 @@ class AuthService {
                 user.lastLogin = new Date();
                 await user.save();
             }
+            if (!user) {
+                throw new Error('User not found after creation');
+            }
             return {
                 id: user.id,
                 email: user.email,

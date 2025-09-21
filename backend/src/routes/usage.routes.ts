@@ -6,7 +6,7 @@ const router = Router();
 const usageService = new UsageService();
 
 // Check live recording usage
-router.post('/check-live-recording', authenticate, async (req: any, res) => {
+router.post('/check-live-recording', authenticate as any, async (req: any, res) => {
   try {
     const { requestedMinutes } = req.body;
     
@@ -33,7 +33,7 @@ router.post('/check-live-recording', authenticate, async (req: any, res) => {
 });
 
 // Record live recording usage
-router.post('/record-live-recording', authenticate, async (req: any, res) => {
+router.post('/record-live-recording', authenticate as any, async (req: any, res) => {
   try {
     const { minutes } = req.body;
     
@@ -60,7 +60,7 @@ router.post('/record-live-recording', authenticate, async (req: any, res) => {
 });
 
 // Check real-time streaming usage
-router.post('/check-realtime-streaming', authenticate, async (req: any, res) => {
+router.post('/check-realtime-streaming', authenticate as any, async (req: any, res) => {
   try {
     const { requestedMinutes } = req.body;
     
@@ -87,7 +87,7 @@ router.post('/check-realtime-streaming', authenticate, async (req: any, res) => 
 });
 
 // Record real-time streaming usage
-router.post('/record-realtime-streaming', authenticate, async (req: any, res) => {
+router.post('/record-realtime-streaming', authenticate as any, async (req: any, res) => {
   try {
     const { minutes } = req.body;
     

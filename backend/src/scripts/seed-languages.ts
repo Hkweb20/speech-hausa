@@ -64,7 +64,7 @@ export async function seedLanguages() {
     await Language.insertMany(defaultLanguages);
     
     logger.info(`Successfully seeded ${defaultLanguages.length} default languages`);
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error seeding languages:', error);
     throw error;
   }

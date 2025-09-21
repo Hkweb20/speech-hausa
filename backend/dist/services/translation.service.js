@@ -144,7 +144,7 @@ class TranslationService {
                         providedVoice: selectedVoice,
                         reason: 'Voice requires model name'
                     }, 'Rejecting unsafe voice, will auto-select safe voice');
-                    selectedVoice = null; // Force auto-selection
+                    selectedVoice = undefined; // Force auto-selection
                 }
             }
             if (!selectedVoice) {
@@ -197,7 +197,7 @@ class TranslationService {
                     !v.name?.includes('Achernar'));
                 logger_1.logger.info({ safeVoicesCount: safeVoices.length }, 'Found safe voices');
                 if (safeVoices.length > 0) {
-                    selectedVoice = safeVoices[0].name;
+                    selectedVoice = safeVoices[0].name || undefined;
                     logger_1.logger.info({ selectedVoice }, 'Selected safe voice');
                 }
                 else {
@@ -242,11 +242,11 @@ class TranslationService {
                         !v.name?.includes('Zubenelgenubi') &&
                         !v.name?.includes('Achernar'));
                     if (fallbackVoices.length > 0) {
-                        selectedVoice = fallbackVoices[0].name;
+                        selectedVoice = fallbackVoices[0].name || undefined;
                         logger_1.logger.info({ selectedVoice }, 'Selected fallback voice');
                     }
                     else if (availableVoices.length > 0) {
-                        selectedVoice = availableVoices[0].name;
+                        selectedVoice = availableVoices[0].name || undefined;
                         logger_1.logger.info({ selectedVoice }, 'Selected first available voice');
                     }
                 }
@@ -303,11 +303,11 @@ class TranslationService {
                     !v.name?.includes('Achernar'));
                 logger_1.logger.info({ safeVoicesCount: safeVoices.length }, 'Found safe voices for fallback');
                 if (safeVoices.length > 0) {
-                    selectedVoice = safeVoices[0].name;
+                    selectedVoice = safeVoices[0].name || undefined;
                     logger_1.logger.info({ selectedVoice }, 'Selected safe fallback voice');
                 }
                 else if (availableVoices.length > 0) {
-                    selectedVoice = availableVoices[0].name;
+                    selectedVoice = availableVoices[0].name || undefined;
                     logger_1.logger.info({ selectedVoice }, 'Selected first available fallback voice');
                 }
                 else {
@@ -369,7 +369,7 @@ class TranslationService {
             });
             const availableVoices = voices.voices?.map(voice => ({
                 name: voice.name || '',
-                gender: voice.ssmlGender || 'NEUTRAL',
+                gender: String(voice.ssmlGender || 'NEUTRAL'),
                 languageCode: voice.languageCodes?.[0] || languageCode
             })) || [];
             logger_1.logger.info({ languageCode, voiceCount: availableVoices.length }, 'Retrieved available voices');

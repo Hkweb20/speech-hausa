@@ -13,7 +13,7 @@ import { authenticate } from '../middleware/mongodb-auth';
 const router = Router();
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticate as any);
 
 // Get recent transcript history
 router.get('/recent', getRecentTranscripts);

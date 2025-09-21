@@ -14,11 +14,11 @@ export const translationRouter = Router();
 logger.info('Translation routes module loaded');
 
 // Translation routes
-translationRouter.post('/translate', optionalAuth, translateText);
-translationRouter.post('/tts', optionalAuth, textToSpeech);
-translationRouter.post('/translate-and-speak', optionalAuth, translateAndSpeak);
-translationRouter.get('/voices/:languageCode', optionalAuth, getAvailableVoices);
-translationRouter.get('/languages', optionalAuth, getSupportedLanguages);
+translationRouter.post('/translate', optionalAuth as any, translateText);
+translationRouter.post('/tts', optionalAuth as any, textToSpeech);
+translationRouter.post('/translate-and-speak', optionalAuth as any, translateAndSpeak);
+translationRouter.get('/voices/:languageCode', optionalAuth as any, getAvailableVoices);
+translationRouter.get('/languages', optionalAuth as any, getSupportedLanguages);
 
 logger.info('Translation routes registered');
 

@@ -163,7 +163,7 @@ export class TranslationService {
             providedVoice: selectedVoice, 
             reason: 'Voice requires model name' 
           }, 'Rejecting unsafe voice, will auto-select safe voice');
-          selectedVoice = null; // Force auto-selection
+          selectedVoice = undefined; // Force auto-selection
         }
       }
       
@@ -223,7 +223,7 @@ export class TranslationService {
         logger.info({ safeVoicesCount: safeVoices.length }, 'Found safe voices');
         
         if (safeVoices.length > 0) {
-          selectedVoice = safeVoices[0].name;
+          selectedVoice = safeVoices[0].name || undefined;
           logger.info({ selectedVoice }, 'Selected safe voice');
         } else {
           // Fallback to any available voice
@@ -270,10 +270,10 @@ export class TranslationService {
           );
           
           if (fallbackVoices.length > 0) {
-            selectedVoice = fallbackVoices[0].name;
+            selectedVoice = fallbackVoices[0].name || undefined;
             logger.info({ selectedVoice }, 'Selected fallback voice');
           } else if (availableVoices.length > 0) {
-            selectedVoice = availableVoices[0].name;
+            selectedVoice = availableVoices[0].name || undefined;
             logger.info({ selectedVoice }, 'Selected first available voice');
           }
         }
@@ -337,10 +337,10 @@ export class TranslationService {
         logger.info({ safeVoicesCount: safeVoices.length }, 'Found safe voices for fallback');
         
         if (safeVoices.length > 0) {
-          selectedVoice = safeVoices[0].name;
+          selectedVoice = safeVoices[0].name || undefined;
           logger.info({ selectedVoice }, 'Selected safe fallback voice');
         } else if (availableVoices.length > 0) {
-          selectedVoice = availableVoices[0].name;
+          selectedVoice = availableVoices[0].name || undefined;
           logger.info({ selectedVoice }, 'Selected first available fallback voice');
         } else {
           throw new Error('No voices available for language: ' + languageCode);
@@ -388,7 +388,7 @@ export class TranslationService {
 
       return Buffer.from(response.audioContent);
 
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ 
         error: error.message, 
         stack: error.stack,
@@ -411,7 +411,7 @@ export class TranslationService {
 
       const availableVoices = voices.voices?.map(voice => ({
         name: voice.name || '',
-        gender: voice.ssmlGender || 'NEUTRAL',
+        gender: String(voice.ssmlGender || 'NEUTRAL'),
         languageCode: voice.languageCodes?.[0] || languageCode
       })) || [];
 
@@ -462,7 +462,7 @@ export class TranslationService {
         voiceUsed: usedVoice
       };
 
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ 
         error: error.message, 
         stack: error.stack,

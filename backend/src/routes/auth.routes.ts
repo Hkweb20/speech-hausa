@@ -144,7 +144,7 @@ router.post('/refresh', async (req: any, res) => {
  * GET /api/auth/profile
  * Get current user profile
  */
-router.get('/profile', authenticate, async (req: any, res) => {
+router.get('/profile', authenticate as any, async (req: any, res) => {
   try {
     const user = await authService.getUserProfile(req.user!.id);
     
@@ -173,7 +173,7 @@ router.get('/profile', authenticate, async (req: any, res) => {
  * PUT /api/auth/profile
  * Update user profile
  */
-router.put('/profile', authenticate, async (req: any, res) => {
+router.put('/profile', authenticate as any, async (req: any, res) => {
   try {
     const { name, preferences } = req.body;
     
@@ -207,7 +207,7 @@ router.put('/profile', authenticate, async (req: any, res) => {
  * GET /api/auth/usage
  * Get user usage statistics
  */
-router.get('/usage', authenticate, async (req: any, res) => {
+router.get('/usage', authenticate as any, async (req: any, res) => {
   try {
     const stats = await usageService.getUserStats(req.user!.id);
     
@@ -258,7 +258,7 @@ router.get('/subscription/tiers', (req, res) => {
  * POST /api/auth/subscription/upgrade
  * Upgrade user subscription
  */
-router.post('/subscription/upgrade', authenticate, async (req: any, res) => {
+router.post('/subscription/upgrade', authenticate as any, async (req: any, res) => {
   try {
     const { tier, paymentMethod } = req.body;
     
@@ -301,7 +301,7 @@ router.post('/subscription/upgrade', authenticate, async (req: any, res) => {
  * POST /api/auth/subscription/cancel
  * Cancel user subscription
  */
-router.post('/subscription/cancel', authenticate, async (req: any, res) => {
+router.post('/subscription/cancel', authenticate as any, async (req: any, res) => {
   try {
     const result = await authService.cancelSubscription(req.user!.id);
 

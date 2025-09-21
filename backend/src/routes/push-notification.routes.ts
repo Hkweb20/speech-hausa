@@ -9,7 +9,7 @@ import { logger } from '../config/logger';
 const router = Router();
 
 // Register device token for push notifications
-router.post('/register-token', authenticate, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.post('/register-token', authenticate as any, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
   if (!userId) {
     return res.status(401).json({
@@ -43,7 +43,7 @@ router.post('/register-token', authenticate, asyncHandler(async (req: Authentica
 }));
 
 // Unregister device token
-router.delete('/unregister-token', authenticate, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/unregister-token', authenticate as any, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
   if (!userId) {
     return res.status(401).json({
@@ -70,7 +70,7 @@ router.delete('/unregister-token', authenticate, asyncHandler(async (req: Authen
 }));
 
 // Get user's device tokens (for debugging)
-router.get('/tokens', authenticate, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.get('/tokens', authenticate as any, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
   if (!userId) {
     return res.status(401).json({
@@ -95,7 +95,7 @@ router.get('/tokens', authenticate, asyncHandler(async (req: AuthenticatedReques
 }));
 
 // Send test notification (for testing purposes)
-router.post('/test', authenticate, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.post('/test', authenticate as any, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
   if (!userId) {
     return res.status(401).json({

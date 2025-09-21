@@ -354,7 +354,7 @@ const processVoiceTranslation = async (req, res) => {
             success: true,
             originalText: 'Transcribed text from audio',
             translatedText: result.translatedText,
-            audioUrl: result.audioUrl,
+            audioData: result.audioBuffer.toString('base64'),
             duration: durationMinutes
         });
     }
