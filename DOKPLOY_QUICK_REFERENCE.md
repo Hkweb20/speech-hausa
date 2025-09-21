@@ -8,7 +8,7 @@
 ssh root@your-vps-ip
 
 # Run setup script
-wget https://raw.githubusercontent.com/yourusername/hausa-speech/main/scripts/setup-dokploy.sh
+wget https://raw.githubusercontent.com/Hkweb20/speech-hausa/scripts/setup-dokploy.sh
 chmod +x setup-dokploy.sh
 ./setup-dokploy.sh
 ```
