@@ -1,7 +1,6 @@
-# Dokploy-optimized Dockerfile for Hausa Speech-to-Text API
+# Development-style Dockerfile for Hausa Speech-to-Text API
 FROM node:18-alpine
 
-# Set working directory
 WORKDIR /app
 
 # Install system dependencies
@@ -16,33 +15,30 @@ RUN apk add --no-cache \
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies (include dev deps so TS can run directly)
+RUN npm install && npm cache clean --force
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# (Skip npm run build for now)
+# RUN npm run build
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S hausa -u 1001
-
-# Create necessary directories
-RUN mkdir -p logs uploads config && \
+    adduser -S hausa -u 1001 && \
+    mkdir -p logs uploads config && \
     chown -R hausa:nodejs logs uploads config
 
-# Switch to non-root user
 USER hausa
 
-# Expose port
+# Expose whatever port your dev server uses
 EXPOSE 4000
 
-# Health check
+# Health check (optional)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:4000/health || exit 1
 
-# Start the application
+# Start the application in dev mode
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["npm", "run", "dev"]   # or ["node","src/index.js"] if you run JS directly
